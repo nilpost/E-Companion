@@ -1,15 +1,18 @@
-import { Bell, UserCircle } from "lucide-react";
+import { Bell, UserCircle, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 export default function NavigationHeader() {
   const { user, logoutMutation } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -39,6 +42,20 @@ export default function NavigationHeader() {
               </DropdownMenuItem>
               <DropdownMenuItem disabled className="text-sm text-gray-500">
                 {user?.role} • Level {user?.level}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={toggleTheme}>
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="h-4 w-4 mr-2" />
+                    Light Theme
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-4 w-4 mr-2" />
+                    Dark Theme
+                  </>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 Logout
