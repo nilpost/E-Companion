@@ -1,0 +1,22 @@
+# Prompt for Replit Agent: Community-Centric Gamified Pet Care App (iOS)
+
+Below is a single natural-language prompt you can paste into Replit’s Mobile App or Replit.com with Agent toggled on. It specifies building an iOS (Swift/React Native via Expo) application that combines core features from PetTracks and 11pets, and adds social, gamification, community, scheduling, real-time monitoring, and 3D e-mascot functionality.
+
+---
+  
+**Prompt:**  
+  
+“I want to build a community-centric, gamified pet care iOS app that supports unlimited pets and multiple user roles (owners, trainers, vets, groomers, salons). Key features:  
+
+-  **User & Pet Profiles**: sign-up/login, owner and provider roles, create and edit pet profiles (name, breed, age, weight, photo) with data stored in a secure database.  
+-  **Health & Activity Tracking**: record vet visits, medications, vaccinations, weight, grooming sessions, walks, feeding logs, and share data with providers. Enable trainers to log activity (GPS-tracked walks, duration, location), upload photos, and register “eats,” “pees,” “poos.” Reminders for appointments and meds.  
+-  **Booking & Scheduling**: owners can browse providers’ availability calendars, book appointments (walking trainers, vets, groomers) and manage all schedules in a calendar view; providers receive real-time notifications, can accept/reject, and update appointment status.  
+-  **Real-Time Monitoring**: during a booked walk or session, capture and display live walk route on map, monitor pet’s temperature, heart rate, and step count via HealthKit integration or connected collar device. Owners see tracker updates in-app.  
+-  **Social & Community**: in-app feed for owners/providers to post updates, photos, and comments; follow other users; join group challenges (e.g., “10K steps in a week”). Push notifications for new posts and challenge progress.  
+-  **Gamification**: assign experience points and badges for completed walks, care tasks, and social interactions; leaderboard for friendly competitions among friends or local community groups.  
+-  **3D E-Mascot Virtual Twin**: allow owner to upload 3–5 photos of their dog; use a simple ML model or a third-party API to generate a basic 3D mascot that reacts to real-time data (e.g., happy when owner logs a walk). Display the e-mascot in a dedicated “Pet Twin” screen with simple animations.  
+-  **Localization & Language**: default UI in English with support for Japanese (i18n).  
+-  **Tech Stack**: use React Native with Expo for cross-platform iOS support or SwiftUI template with React Native modules; integrate Replit Database or PostgreSQL; deploy through Expo EAS for App Store.  
+-  **Extras**: Dark mode, push notifications, image uploads and storage, analytics for app usage.
+
+Scaffold the project structure, install dependencies (React Native, Expo, HealthKit integration), create screens/components/modules for each feature above, set up navigation, database schema, and typical UI flows. Provide stubbed ML integration for 3D mascot generation with comments indicating where to plug in a real model. Generate initial code and explain folder structure.”
