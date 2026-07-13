@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { passport } from "./auth";
 import { registerRoutes } from "./routes";
 import { closeDb } from "./db";
+import { initializeAllJobs } from "./jobs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -78,6 +79,12 @@ const server = createServer(app);
 
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Environment: ${NODE_ENV}`);
+
+  // Initialize background jobs after server starts
+  initializeAllJobs().catch((err) => {
+    console.error("Failed to initialize background jobs:", err);
+  });
 });
 
 // Graceful shutdown
