@@ -3,6 +3,7 @@ import {
   users,
   repositories,
   dependencies,
+  unusedDependencies,
   vulnerabilities,
   repositoryLogs,
   syncJobs,
@@ -10,6 +11,7 @@ import {
   InsertUser,
   InsertRepository,
   InsertDependency,
+  InsertUnusedDependency,
   InsertVulnerability,
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -98,6 +100,34 @@ export async function upsertDependency(data: InsertDependency) {
     return result[0];
   } else {
     const result = await db.insert(dependencies).values(data).returning();
+    return result[0];
+  }
+}
+
+// Unused Dependencies
+export async function getUnusedDependenciesByRepo(repositoryId: number) {
+  return await db.query.unusedDependencies.findMany({
+    where: eq(unusedDependencies.repositoryId, repositoryId),
+  });
+}
+
+export async function upsertUnusedDependency(data: InsertUnusedDependency) {
+  const existing = await db.query.unusedDependencies.findFirst({
+    where: and(
+      eq(unusedDependencies.repositoryId, data.repositoryId),
+      eq(unusedDependencies.dependencyName, data.dependencyName)
+    ),
+  });
+
+  if (existing) {
+    const result = await db
+      .update(unusedDependencies)
+      .set(data)
+      .where(eq(unusedDependencies.id, existing.id))
+      .returning();
+    return result[0];
+  } else {
+    const result = await db.insert(unusedDependencies).values(data).returning();
     return result[0];
   }
 }

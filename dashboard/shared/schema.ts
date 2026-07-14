@@ -68,10 +68,31 @@ export const dependencies = pgTable(
   })
 );
 
+export const unusedDependencies = pgTable(
+  "unused_dependencies",
+  {
+    id: serial("id").primaryKey(),
+    repositoryId: integer("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+    dependencyName: varchar("dependency_name", { length: 255 }).notNull(),
+    type: varchar("type", { length: 50 }), // dependency | devDependency
+    reason: text("reason"), // Why it's unused
+    detectedAt: timestamp("detected_at").defaultNow(),
+  },
+  (table) => ({
+    repoIdIdx: uniqueIndex("idx_unused_dependencies_repo_id_name").on(
+      table.repositoryId,
+      table.dependencyName
+    ),
+  })
+);
+
 export const vulnerabilities = pgTable(
   "vulnerabilities",
   {
     id: serial("id").primaryKey(),
+    dependencyName: varchar("dependency_name", { length: 255 }),
     dependencyId: integer("dependency_id").references(() => dependencies.id, {
       onDelete: "cascade",
     }),
@@ -80,11 +101,13 @@ export const vulnerabilities = pgTable(
       .references(() => repositories.id, { onDelete: "cascade" }),
     severity: severityEnum("severity").notNull(),
     cveId: varchar("cve_id", { length: 100 }),
+    ghsaId: varchar("ghsa_id", { length: 100 }),
     description: text("description"),
     affectedVersions: text("affected_versions").array(),
     fixedVersion: varchar("fixed_version", { length: 100 }),
-    source: varchar("source", { length: 100 }), // npm-audit, snyk, etc
+    source: varchar("source", { length: 100 }), // github-dependabot, snyk, owasp, etc
     discoveredAt: timestamp("discovered_at").defaultNow(),
+    detectedAt: timestamp("detected_at").defaultNow(),
     resolvedAt: timestamp("resolved_at"),
   },
   (table) => ({
@@ -143,6 +166,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const repositoriesRelations = relations(repositories, ({ one, many }) => ({
   user: one(users, { fields: [repositories.userId], references: [users.id] }),
   dependencies: many(dependencies),
+  unusedDependencies: many(unusedDependencies),
   vulnerabilities: many(vulnerabilities),
   logs: many(repositoryLogs),
   architectureData: many(architectureData),
@@ -155,6 +179,13 @@ export const dependenciesRelations = relations(dependencies, ({ one, many }) => 
     references: [repositories.id],
   }),
   vulnerabilities: many(vulnerabilities),
+}));
+
+export const unusedDependenciesRelations = relations(unusedDependencies, ({ one }) => ({
+  repository: one(repositories, {
+    fields: [unusedDependencies.repositoryId],
+    references: [repositories.id],
+  }),
 }));
 
 export const vulnerabilitiesRelations = relations(vulnerabilities, ({ one }) => ({
@@ -211,6 +242,12 @@ export const insertDependencySchema = createInsertSchema(dependencies).omit({
   analyzedAt: true,
 });
 
+export const unusedDependencySchema = createSelectSchema(unusedDependencies);
+export const insertUnusedDependencySchema = createInsertSchema(unusedDependencies).omit({
+  id: true,
+  detectedAt: true,
+});
+
 export const vulnerabilitySchema = createSelectSchema(vulnerabilities);
 export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities).omit({
   id: true,
@@ -243,6 +280,8 @@ export type Repository = typeof repositories.$inferSelect;
 export type InsertRepository = typeof repositories.$inferInsert;
 export type Dependency = typeof dependencies.$inferSelect;
 export type InsertDependency = typeof dependencies.$inferInsert;
+export type UnusedDependency = typeof unusedDependencies.$inferSelect;
+export type InsertUnusedDependency = typeof unusedDependencies.$inferInsert;
 export type Vulnerability = typeof vulnerabilities.$inferSelect;
 export type InsertVulnerability = typeof vulnerabilities.$inferInsert;
 export type SyncJob = typeof syncJobs.$inferSelect;

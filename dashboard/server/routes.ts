@@ -180,6 +180,51 @@ router.get("/dependencies/vulnerable", requireAuth, async (req, res) => {
   }
 });
 
+// Unused Dependencies Routes
+router.get("/repositories/:id/unused-dependencies", requireAuth, async (req, res) => {
+  try {
+    // Verify user owns this repo
+    const repo = await storage.getRepositoryById(
+      parseInt(req.params.id),
+      req.user.id
+    );
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found" });
+    }
+
+    const unused = await storage.getUnusedDependenciesByRepo(
+      parseInt(req.params.id)
+    );
+    res.json(unused);
+  } catch (err) {
+    console.error("Failed to fetch unused dependencies:", err);
+    res.status(500).json({ error: "Failed to fetch unused dependencies" });
+  }
+});
+
+router.get("/dependencies/unused", requireAuth, async (req, res) => {
+  try {
+    const repos = await storage.getUserRepositories(req.user.id);
+    const allUnused = [];
+
+    for (const repo of repos) {
+      const unused = await storage.getUnusedDependenciesByRepo(repo.id);
+      if (unused.length > 0) {
+        allUnused.push({
+          repository: repo.name,
+          repositoryId: repo.id,
+          unusedDependencies: unused,
+        });
+      }
+    }
+
+    res.json(allUnused);
+  } catch (err) {
+    console.error("Failed to fetch unused dependencies:", err);
+    res.status(500).json({ error: "Failed to fetch unused dependencies" });
+  }
+});
+
 // Vulnerability Routes
 router.get(
   "/repositories/:id/vulnerabilities",
@@ -226,6 +271,28 @@ router.get("/vulnerabilities/all", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Failed to fetch vulnerabilities:", err);
     res.status(500).json({ error: "Failed to fetch vulnerabilities" });
+  }
+});
+
+router.post("/repositories/:id/vulnerabilities/scan", requireAuth, async (req, res) => {
+  try {
+    // Verify user owns this repo
+    const repo = await storage.getRepositoryById(
+      parseInt(req.params.id),
+      req.user.id
+    );
+    if (!repo) {
+      return res.status(404).json({ error: "Repository not found" });
+    }
+
+    // Import and run the scan function
+    const { runVulnerabilityScanForRepository } = await import("../jobs/detect-vulnerabilities.job");
+    await runVulnerabilityScanForRepository(parseInt(req.params.id));
+
+    res.json({ message: "Vulnerability scan completed", status: "completed" });
+  } catch (err) {
+    console.error("Failed to scan vulnerabilities:", err);
+    res.status(500).json({ error: "Failed to scan vulnerabilities" });
   }
 });
 

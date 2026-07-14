@@ -1,45 +1,9 @@
 import cron from "node-cron";
-import { execSync } from "child_process";
-import * as storage from "../storage";
 import { db } from "../db";
-import { repositories } from "@shared/schema";
-
-// Simple npm audit parser
-function parseNpmAudit(auditOutput: string): any[] {
-  try {
-    const audit = JSON.parse(auditOutput);
-    const vulnerabilities: any[] = [];
-
-    if (audit.vulnerabilities) {
-      for (const [pkgName, vulnData] of Object.entries(audit.vulnerabilities)) {
-        if (typeof vulnData === "object" && vulnData !== null) {
-          const data = vulnData as any;
-          if (data.via && Array.isArray(data.via)) {
-            for (const vuln of data.via) {
-              if (typeof vuln === "object") {
-                vulnerabilities.push({
-                  packageName: pkgName,
-                  severity: vuln.severity || "unknown",
-                  cveId: vuln.cve,
-                  description: vuln.title || vuln.description,
-                  fixedVersion: vuln.fixed,
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return vulnerabilities;
-  } catch (err) {
-    console.error("Failed to parse npm audit output:", err);
-    return [];
-  }
-}
+import { vulnerabilityService } from "../services/vulnerability.service";
+import { vulnerabilities } from "@shared/schema";
 
 export async function initializeVulnerabilityJobs() {
-  // Run vulnerability detection daily at 2 AM
   const cronSchedule = "0 2 * * *";
 
   console.log("Initializing vulnerability detection jobs");
@@ -56,18 +20,41 @@ export async function initializeVulnerabilityJobs() {
 
 export async function runVulnerabilityDetection() {
   try {
-    // Get all repositories
     const repos = await db.query.repositories.findMany();
 
     for (const repo of repos) {
       try {
         console.log(`Scanning vulnerabilities for ${repo.fullName}...`);
 
-        // TODO: Implement actual npm audit scanning
-        // For MVP, we'll skip this as it requires downloading repos
-        // This would be implemented in Phase 2 with proper code access
+        const [owner, repoName] = repo.fullName.split("/");
+        const alerts = await vulnerabilityService.fetchGitHubDependabotAlerts(
+          owner,
+          repoName
+        );
 
-        console.log(`✓ Scanned ${repo.fullName}`);
+        // Clear existing vulnerabilities for this repo
+        await db
+          .delete(vulnerabilities)
+          .where((t: any) => t.repositoryId === repo.id);
+
+        // Insert new vulnerabilities
+        for (const alert of alerts) {
+          await db.insert(vulnerabilities).values({
+            repositoryId: repo.id,
+            dependencyName: alert.dependencyName,
+            severity: vulnerabilityService.mapSeverityLevel(alert.severity),
+            cveId: alert.cveId,
+            ghsaId: alert.ghsaId,
+            description: alert.description,
+            affectedVersions: alert.vulnerableVersions,
+            fixedVersion: alert.fixedVersion,
+            source: "github-dependabot",
+            discoveredAt: new Date(alert.detectedAt),
+            detectedAt: new Date(),
+          });
+        }
+
+        console.log(`✓ Found ${alerts.length} vulnerabilities in ${repo.fullName}`);
       } catch (err) {
         console.error(`Failed to scan ${repo.fullName}:`, err);
       }
@@ -79,11 +66,12 @@ export async function runVulnerabilityDetection() {
   }
 }
 
-export function createVulnerabilityScanner() {
-  return async (repositoryId: number) => {
-    // Manual vulnerability scan for a specific repository
+export async function runVulnerabilityScanForRepository(
+  repositoryId: number
+): Promise<any[]> {
+  try {
     const repo = await db.query.repositories.findFirst({
-      where: (table: any) => (table.id === repositoryId ? true : false),
+      where: (table: any) => table.id === repositoryId,
     });
 
     if (!repo) {
@@ -91,7 +79,38 @@ export function createVulnerabilityScanner() {
     }
 
     console.log(`Manual vulnerability scan for ${repo.fullName}`);
-    // TODO: Implement actual scanning
+
+    const [owner, repoName] = repo.fullName.split("/");
+    const alerts = await vulnerabilityService.fetchGitHubDependabotAlerts(
+      owner,
+      repoName
+    );
+
+    // Clear existing vulnerabilities
+    await db
+      .delete(vulnerabilities)
+      .where((t: any) => t.repositoryId === repo.id);
+
+    // Insert new vulnerabilities
+    for (const alert of alerts) {
+      await db.insert(vulnerabilities).values({
+        repositoryId: repo.id,
+        dependencyName: alert.dependencyName,
+        severity: vulnerabilityService.mapSeverityLevel(alert.severity),
+        cveId: alert.cveId,
+        ghsaId: alert.ghsaId,
+        description: alert.description,
+        affectedVersions: alert.vulnerableVersions,
+        fixedVersion: alert.fixedVersion,
+        source: "github-dependabot",
+        discoveredAt: new Date(alert.detectedAt),
+        detectedAt: new Date(),
+      });
+    }
+
+    return alerts;
+  } catch (err) {
+    console.error(`Vulnerability scan failed for repository ${repositoryId}:`, err);
     return [];
-  };
+  }
 }

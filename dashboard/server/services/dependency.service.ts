@@ -1,3 +1,7 @@
+import { execSync } from "child_process";
+import path from "path";
+import fs from "fs";
+
 interface PackageJsonDeps {
   [name: string]: string;
 }
@@ -211,6 +215,60 @@ class DependencyService {
     }
 
     return Array.from(techs);
+  }
+
+  async detectUnusedDependencies(repoPath: string): Promise<any> {
+    try {
+      const result = JSON.parse(
+        execSync("npx knip --reporter json", {
+          cwd: repoPath,
+          timeout: 30000,
+          encoding: "utf-8",
+        })
+      );
+
+      return result;
+    } catch (error) {
+      console.error(`Failed to detect unused dependencies in ${repoPath}:`, error);
+      return { unused: [], unresolved: [], violations: [] };
+    }
+  }
+
+  async parseKnipOutput(
+    knipOutput: any,
+    packageJson: any
+  ): Promise<
+    Array<{
+      dependencyName: string;
+      type: "dependency" | "devDependency";
+      reason: string;
+    }>
+  > {
+    const unusedDeps: Array<{
+      dependencyName: string;
+      type: "dependency" | "devDependency";
+      reason: string;
+    }> = [];
+
+    if (!knipOutput.unused) {
+      return [];
+    }
+
+    // Flatten the unused dependencies from knip output
+    const allUnused = knipOutput.unused;
+
+    for (const depName of allUnused) {
+      const isDev = packageJson.devDependencies?.[depName];
+      const isRegular = packageJson.dependencies?.[depName];
+
+      unusedDeps.push({
+        dependencyName: depName,
+        type: isDev ? "devDependency" : "dependency",
+        reason: "Detected as unused by knip analysis",
+      });
+    }
+
+    return unusedDeps;
   }
 }
 
