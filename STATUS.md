@@ -30,6 +30,7 @@ _None currently open._
 | 2026-07-17 | Identified passport-local unhandled-rejection bug as root cause of register/login production incident; fix staged but not committed | Change affects production auth for all users — wants explicit confirmation before deploy |
 | 2026-07-17 | BUG-01 fixed and merged (PR #3) after independent qa + devops agent sign-off | Confirmed safe: full try/catch coverage, build passes, Railway `ON_FAILURE` restart policy confirmed the crash theory |
 | 2026-07-17 | Escalated HARDEN-01 to P1 and wrapped all 23 async routes in `server/routes.ts` with an `asyncHandler` forwarding to the global error middleware | BUG-01 proved this failure class (unhandled rejection → process crash) causes real production outages; same risk existed across every route, not just auth |
+| 2026-07-17 | Removed all Replit platform dependencies (CHORE-05): `@replit/vite-plugin-*` devDeps, the unconditional `replit-dev-banner.js` script tag in `client/index.html`, and the `.replit` config file. PR #8 opened as draft, not yet merged | App now deploys on Railway, not Replit; the dev-banner script was fetching from Replit's CDN on every page load in production, and the vite plugins were dead-weight devDeps that also broke `npm run check` once uninstalled from a non-Replit environment |
 
 ## Agent team status
 | Agent | Status |

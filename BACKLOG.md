@@ -44,11 +44,14 @@
 - [ ] SEC-02: Full OWASP Top 10 security audit
 - [ ] INFRA-01: Staging environment on Railway
 - [ ] INFRA-02: Automated DB backups (Supabase)
+- [ ] CHORE-06: Update GitHub repo "homepage" metadata field (still points to old replit.com project URL) to https://companion.postiusgroup.com — requires repo admin, blocked from this sandbox (proxy blocks repo-settings writes)
+- [ ] CHORE-07: Fix pre-existing `npm run check` type errors in server/storage.ts (insert() array-typed fields like gpsRoute/attachments/services mismatched against Drizzle's overload types) — found while verifying build during CHORE-05, unrelated to Replit removal, not yet triaged
 
 ---
 
 ## Completed
 
+- [x] CHORE-05: Remove Replit platform dependencies (@replit/vite-plugin-cartographer, @replit/vite-plugin-runtime-error-modal, replit-dev-banner.js script in client/index.html, .replit config) so app runs standalone off Railway. PR #8 (merged). ✅ 2026-07-17
 - [x] INFRA-03: Deploy app to Railway ✅ 2026-07-13
 - [x] INFRA-04: Configure Cloudflare DNS → companion.postiusgroup.com ✅ 2026-07-13
 - [x] INFRA-05: Supabase PostgreSQL connected + schema pushed ✅ 2026-07-13
