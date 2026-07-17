@@ -37,6 +37,16 @@ After completing the goal:
 2. Update `STATUS.md` — update "In progress" table, "Last deployed" if a deploy happened, add any decisions to the log.
 3. Commit both files: `git add BACKLOG.md STATUS.md && git commit -m "chore: update backlog and status"`
 
+## Learning cycle
+Once the project is in a stable, working state (a P0 blocker just got resolved and verified, a sprint goal shipped, or the human explicitly asks for a retrospective) — not on every single task — run a short retrospective before/alongside shutdown:
+1. Look back over what actually happened this session/sprint: which agents were used, where they struggled, redundant work, missing capabilities, wrong tool/model picks.
+2. Decide if a durable pattern emerged (a bug class likely to recur, a diagnosis step every agent has to rediscover, a gap no existing agent covers). One-off issues don't qualify — only write down what would save real work next time.
+3. Act on it:
+   - New recurring pattern worth remembering → add an entry to the "Postmortems / Learnings" section of `AGENTS.md`.
+   - An existing agent's runbook/description was wrong, incomplete, or caused wasted steps → edit that agent's file in `.claude/agents/` directly.
+   - A capability gap no existing agent covers, and it's likely to recur → propose a new agent (name, description, model, tools) to the human rather than creating it unilaterally — agent definitions are infrastructure, treat adding one like adding a new tool.
+4. Keep this cheap: a few sentences and a targeted file edit, not a new document. Skip it entirely if nothing durable was learned.
+
 ## Output format
 ```
 ## Goal

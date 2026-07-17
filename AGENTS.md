@@ -119,6 +119,19 @@ npm run dev
 - Node 18 on Railway — do NOT use `import.meta.dirname` (Node 21+ only)
 - Use `fileURLToPath(import.meta.url)` or `process.cwd()` instead
 
+**Verifying a deploy went live**: Claude Code web/agent sessions run behind an outbound network allowlist that does NOT include `companion.postiusgroup.com` by default — `curl`/`WebFetch` to the live URL will 403 at the proxy, not at the app. Don't report this as "site is down"; report it as "cannot verify from this sandbox" and ask the human to check the Railway dashboard, or to widen the session's network policy (see https://code.claude.com/docs/en/claude-code-on-the-web) if live verification is needed repeatedly.
+
+---
+
+## Postmortems / Learnings
+
+> Durable lessons from real incidents. Add an entry when a bug reveals a pattern likely to recur — not for routine fixes.
+
+- **2026-07-17 — Unhandled promise rejections crash the whole process (BUG-01 / HARDEN-01)**: Any `async` Express handler (route handler, or a callback library like `passport-local` that doesn't await/catch its callback) whose rejection is never caught becomes an unhandled promise rejection. Node exits on this by default, and Railway's `ON_FAILURE` restart policy then serves 502s to *every* user until it restarts — not just the one request that failed. Fix pattern: never leave an `async` callback unguarded.
+  - `server/auth.ts`: passport callbacks (`LocalStrategy` verify, `deserializeUser`) now wrap their bodies in try/catch and resolve errors via `done(err)`.
+  - `server/routes.ts`: all route handlers go through the `asyncHandler` wrapper (top of file), which forwards rejections to `next(err)` → the global error middleware in `server/index.ts`. **Any new route added to this file must use `asyncHandler`.**
+  - General rule: a raw `async (req, res) => {...}` route handler with no `asyncHandler`/try-catch is a bug, not a style choice.
+
 ---
 
 ## Auth conventions
