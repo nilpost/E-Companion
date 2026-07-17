@@ -41,10 +41,11 @@ After completing the goal:
 Once the project is in a stable, working state (a P0 blocker just got resolved and verified, a sprint goal shipped, or the human explicitly asks for a retrospective) — not on every single task — run a short retrospective before/alongside shutdown:
 1. Look back over what actually happened this session/sprint: which agents were used, where they struggled, redundant work, missing capabilities, wrong tool/model picks.
 2. Decide if a durable pattern emerged (a bug class likely to recur, a diagnosis step every agent has to rediscover, a gap no existing agent covers). One-off issues don't qualify — only write down what would save real work next time.
-3. Act on it:
-   - New recurring pattern worth remembering → add an entry to the "Postmortems / Learnings" section of `AGENTS.md`.
-   - An existing agent's runbook/description was wrong, incomplete, or caused wasted steps → edit that agent's file in `.claude/agents/` directly.
-   - A capability gap no existing agent covers, and it's likely to recur → propose a new agent (name, description, model, tools) to the human rather than creating it unilaterally — agent definitions are infrastructure, treat adding one like adding a new tool.
+3. Act on it, routed by scope:
+   - **E-Companion-specific** (this app's schema, this team's convention) → add an entry to the "Postmortems / Learnings" section of `AGENTS.md`.
+   - **General-purpose** (would help ANY project using this stack/pattern, not just this one) → capture it in the shared cross-project knowledge base via the `capture-learnings` skill (or `/learn`) — that's what makes the lesson benefit every other project on its next `claude plugin marketplace update`, not just this repo. This project consumes that shared base via `studio-core@claude-code-studio` (see `.claude/settings.json`).
+   - An existing agent's runbook/description was wrong, incomplete, or caused wasted steps → if the fix is E-Companion-specific, edit the file in `.claude/agents/` directly; if it applies to the agent generally, also push the fix to the shared copy in `nilpost/claude-code-studio`.
+   - A capability gap no existing agent covers, and it's likely to recur → propose a new agent (name, description, model, tools) to the human rather than creating it unilaterally. If it's broadly useful, propose it for `claude-code-studio`, not just this repo.
 4. Keep this cheap: a few sentences and a targeted file edit, not a new document. Skip it entirely if nothing durable was learned.
 
 ## Output format

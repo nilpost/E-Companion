@@ -157,6 +157,15 @@ npm run dev
 
 ## Agent registry
 
+These 9 agents originated in this repo and are now also published as `studio-core` in
+[`nilpost/claude-code-studio`](https://github.com/nilpost/claude-code-studio) — a git-hosted
+Claude Code plugin marketplace that distributes the same agents (generalized to any stack) to
+every other project, plus a shared, incrementally-growing `knowledge/LEARNINGS.md`. This repo
+consumes that marketplace via `.claude/settings.json` (`extraKnownMarketplaces` +
+`enabledPlugins`), but its own `.claude/agents/*.md` still take priority for E-Companion-specific
+behavior — the marketplace copies are the generic fallback everyone else gets. See `po.md`'s
+"Learning cycle" for how a lesson decides whether it stays local or goes to the shared base.
+
 | Agent | Model | Trigger — use when... |
 |-------|-------|----------------------|
 | `po` | Sonnet 5 | Starting any goal. Reads session files, orchestrates, updates them on exit. |
