@@ -8,6 +8,7 @@
 
 ## P0 — Blocking / Critical
 - [x] BUG-01: Production user registration/login failing (500 on /api/register, 502 on /api/login). Root cause: `passport-local` LocalStrategy verify callback and `deserializeUser` in `server/auth.ts` did not catch async errors, so a DB error thrown during login became an unhandled promise rejection and crashed the Node process (manifesting as 502 for all users, not just the one logging in). Fix merged via PR #3 (server/auth.ts, server/index.ts). ✅ 2026-07-17
+- [ ] BUG-02: User reports still cannot create an account in prod (500 on /api/register, 401 on /api/user) as of 2026-07-17, after BUG-01/HARDEN-01 were already merged. Full code audit + a live end-to-end registration test (POST /api/register → 201, session persists on GET /api/user → 200, POST /api/logout → 200, GET /api/user after logout → 401, row confirmed in DB) against a freshly-migrated local Postgres DB on current HEAD (`e8e58ec`) all passed — application code is confirmed correct and the 500 could not be reproduced locally. GET /api/user returning 401 with no session cookie is expected/correct behavior, not a bug. Leading theory: Railway prod may still be serving a pre-BUG-01-fix build — STATUS.md's "Last deployed" field pointed at `77762c9`, a commit that predates the BUG-01 (`7632c1c`) and HARDEN-01 (`51ab9d9`) merges, and was never updated after those PRs merged; nothing in-repo confirms Railway's auto-deploy actually redeployed on those merges. **Needs a human to check the Railway dashboard for the actually-deployed commit SHA and force a redeploy if it's behind `main`.** Also flagged by infra-admin's static audit (unverifiable live from the agent sandbox): confirm the Supabase DB role behind `DATABASE_URL` has `CREATE TABLE` privilege — `connect-pg-simple`'s `createTableIfMissing: true` (server/storage.ts) would 500 on the first post-register session write if it doesn't.
 
 ---
 
@@ -29,6 +30,7 @@
 - [ ] QA-02: Reminder CRUD API test coverage
 - [ ] DOCS-01: Generate API reference (all /api/* routes)
 - [ ] DOCS-02: Architecture diagram (frontend → backend → DB → infra)
+- [ ] CHORE-05: Add `cookie: { secure: NODE_ENV === 'production', sameSite: 'strict' }` to the express-session config in server/auth.ts — currently unset, relying on library defaults. Not confirmed as a bug, but flagged during BUG-02 investigation (2026-07-17) as worth closing given the app sits behind Cloudflare + Railway TLS termination.
 
 ---
 
@@ -44,6 +46,7 @@
 - [ ] SEC-02: Full OWASP Top 10 security audit
 - [ ] INFRA-01: Staging environment on Railway
 - [ ] INFRA-02: Automated DB backups (Supabase)
+- [ ] CHORE-06: Chrome DevTools flags "Session History Item Has Been Marked Skippable" on /auth — history.pushState/replaceState is being invoked without user interaction on page load (likely wouter's router or the redirect-if-already-logged-in effect in client/src/pages/auth-page.tsx). Cosmetic/DX warning, not a functional bug reported by users — deferred 2026-07-17. Revisit if it starts affecting back-button UX or Lighthouse scores.
 
 ---
 

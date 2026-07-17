@@ -141,6 +141,7 @@ export default function AuthPage() {
                       <Label htmlFor="login-username">Username</Label>
                       <Input
                         id="login-username"
+                        autoComplete="username"
                         {...loginForm.register("username")}
                         placeholder="Enter your username"
                       />
@@ -154,6 +155,7 @@ export default function AuthPage() {
                       <Input
                         id="login-password"
                         type="password"
+                        autoComplete="current-password"
                         {...loginForm.register("password")}
                         placeholder="Enter your password"
                       />
@@ -185,6 +187,7 @@ export default function AuthPage() {
                         <Label htmlFor="firstName">First Name</Label>
                         <Input
                           id="firstName"
+                          autoComplete="given-name"
                           {...registerForm.register("firstName")}
                           placeholder="First name"
                         />
@@ -197,6 +200,7 @@ export default function AuthPage() {
                         <Label htmlFor="lastName">Last Name</Label>
                         <Input
                           id="lastName"
+                          autoComplete="family-name"
                           {...registerForm.register("lastName")}
                           placeholder="Last name"
                         />
@@ -211,6 +215,7 @@ export default function AuthPage() {
                       <Input
                         id="email"
                         type="email"
+                        autoComplete="email"
                         {...registerForm.register("email")}
                         placeholder="Enter your email"
                       />
@@ -223,6 +228,7 @@ export default function AuthPage() {
                       <Label htmlFor="username">Username</Label>
                       <Input
                         id="username"
+                        autoComplete="username"
                         {...registerForm.register("username")}
                         placeholder="Choose a username"
                       />
@@ -234,7 +240,7 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label htmlFor="role">Role</Label>
                       <Select onValueChange={(value) => registerForm.setValue("role", value)} defaultValue="owner">
-                        <SelectTrigger>
+                        <SelectTrigger id="role" name="role">
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -254,6 +260,7 @@ export default function AuthPage() {
                       <Input
                         id="password"
                         type="password"
+                        autoComplete="new-password"
                         {...registerForm.register("password")}
                         placeholder="Create a password"
                       />
@@ -267,6 +274,7 @@ export default function AuthPage() {
                       <Input
                         id="confirmPassword"
                         type="password"
+                        autoComplete="new-password"
                         {...registerForm.register("confirmPassword")}
                         placeholder="Confirm your password"
                       />
