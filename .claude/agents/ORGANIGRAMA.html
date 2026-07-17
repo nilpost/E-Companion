@@ -1,0 +1,575 @@
+<title>E-Companion — Agent Organigrama</title>
+<style>
+  :root {
+    --bg: #f5f4f8;
+    --surface: #ffffff;
+    --surface-2: #edebf5;
+    --ink: #1c1b24;
+    --ink-dim: #66637a;
+    --ink-faint: #918eaa;
+    --line: #d8d5e6;
+    --line-strong: #b7b2cf;
+    --accent: #4338ca;
+    --accent-soft: #e7e5fb;
+    --accent-contrast: #ffffff;
+    --sonnet-ink: #146c5d;
+    --sonnet-bg: #dff3ee;
+    --sonnet-line: #a9ddce;
+    --haiku-ink: #92400e;
+    --haiku-bg: #fbeedc;
+    --haiku-line: #eecda0;
+    --code-bg: #edebf5;
+    --shadow: 0 1px 2px rgba(28, 27, 36, 0.06), 0 8px 24px -12px rgba(28, 27, 36, 0.18);
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #131218;
+    --surface: #1b1a23;
+    --surface-2: #211f2c;
+    --ink: #ede9f5;
+    --ink-dim: #9c99b0;
+    --ink-faint: #6f6c85;
+    --line: #322f42;
+    --line-strong: #423e58;
+    --accent: #9b95ff;
+    --accent-soft: #26234a;
+    --accent-contrast: #131218;
+    --sonnet-ink: #6be8d1;
+    --sonnet-bg: #123a34;
+    --sonnet-line: #1c554c;
+    --haiku-ink: #f2b463;
+    --haiku-bg: #3a2712;
+    --haiku-line: #5a3c1c;
+    --code-bg: #211f2c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131218;
+      --surface: #1b1a23;
+      --surface-2: #211f2c;
+      --ink: #ede9f5;
+      --ink-dim: #9c99b0;
+      --ink-faint: #6f6c85;
+      --line: #322f42;
+      --line-strong: #423e58;
+      --accent: #9b95ff;
+      --accent-soft: #26234a;
+      --accent-contrast: #131218;
+      --sonnet-ink: #6be8d1;
+      --sonnet-bg: #123a34;
+      --sonnet-line: #1c554c;
+      --haiku-ink: #f2b463;
+      --haiku-bg: #3a2712;
+      --haiku-line: #5a3c1c;
+      --code-bg: #211f2c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "URW Palladio L", P052, Georgia, serif;
+    font-size: 16px;
+    line-height: 1.55;
+    padding: 3rem 1.5rem 5rem;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+  }
+
+  .page {
+    max-width: 68rem;
+    margin: 0 auto;
+  }
+
+  header.masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem 2rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .masthead-title {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.1rem + 1.6vw, 2.15rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .masthead-title .mono {
+    color: var(--accent);
+  }
+
+  .masthead-meta {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: right;
+    line-height: 1.7;
+  }
+
+  .lede {
+    max-width: 42rem;
+    color: var(--ink-dim);
+    font-size: 1.05rem;
+    margin: 0 0 3.5rem;
+  }
+
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* ---- section labels ---- */
+  .section-label {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin: 0 0 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* ---- chart ---- */
+  .chart {
+    margin-bottom: 4rem;
+  }
+
+  .inputs-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+
+  .input-chip {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.8rem;
+    box-shadow: var(--shadow);
+  }
+
+  .input-chip .name {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink);
+    display: block;
+  }
+
+  .input-chip .desc {
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    display: block;
+    margin-top: 0.2rem;
+    line-height: 1.35;
+  }
+
+  .stem {
+    width: 1px;
+    height: 2.25rem;
+    background: var(--line-strong);
+    margin: 0 auto;
+  }
+
+  .arrow {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+    transform: translateY(-0.4rem) rotate(45deg);
+    margin: 0 auto;
+  }
+
+  .hub {
+    width: 15.5rem;
+    margin: 0 auto;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.3rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+
+  .hub .role {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.82;
+  }
+
+  .hub .name {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0.2rem 0 0.35rem;
+  }
+
+  .hub .model {
+    font-size: 0.72rem;
+    opacity: 0.85;
+  }
+
+  .hub .badge {
+    position: absolute;
+    top: -0.6rem;
+    right: -0.6rem;
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.03em;
+    padding: 0.22rem 0.55rem;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+
+  .branches {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    max-width: 46rem;
+    margin: 0 auto;
+  }
+
+  .branch-line {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .branch-line .h {
+    width: 100%;
+    height: 1px;
+    background: var(--line-strong);
+    position: relative;
+    top: 1.1rem;
+  }
+
+  .branch-line .v {
+    width: 1px;
+    height: 1.1rem;
+    background: var(--line-strong);
+  }
+
+  .tiers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: -1px;
+  }
+
+  .tier {
+    border: 1px solid var(--line);
+    border-radius: 0.85rem;
+    background: var(--surface-2);
+    padding: 1.1rem;
+  }
+
+  .tier-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px dashed var(--line-strong);
+  }
+
+  .tier-head .label {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .tier.sonnet .tier-head .label { color: var(--sonnet-ink); }
+  .tier.haiku .tier-head .label { color: var(--haiku-ink); }
+
+  .tier-head .model-tag {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.66rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .tier.sonnet .model-tag { color: var(--sonnet-ink); background: var(--sonnet-bg); border: 1px solid var(--sonnet-line); }
+  .tier.haiku .model-tag { color: var(--haiku-ink); background: var(--haiku-bg); border: 1px solid var(--haiku-line); }
+
+  .cards {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    padding: 0.75rem 0.85rem;
+    box-shadow: var(--shadow);
+  }
+
+  .card .name {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--ink);
+  }
+
+  .card .trigger {
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+    margin: 0.3rem 0 0.5rem;
+    line-height: 1.4;
+  }
+
+  .card .tools {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.66rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.01em;
+  }
+
+  /* ---- file map ---- */
+  .filemap {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .tree {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    padding: 1rem 1.1rem;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.85;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .dim { color: var(--ink-faint); }
+  .tree .new { color: var(--sonnet-ink); }
+
+  .filenote {
+    font-size: 0.92rem;
+    color: var(--ink-dim);
+  }
+
+  .filenote p { margin: 0 0 0.9rem; }
+  .filenote p:last-child { margin-bottom: 0; }
+  .filenote strong { color: var(--ink); font-weight: 600; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", "JetBrains Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 760px) {
+    .inputs-row { grid-template-columns: repeat(2, 1fr); }
+    .tiers { grid-template-columns: 1fr; }
+    .branches { display: none; }
+    .filemap { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in {
+      animation: fadeIn 0.5s ease-out both;
+    }
+    .fade-in:nth-of-type(2) { animation-delay: 0.05s; }
+    .fade-in:nth-of-type(3) { animation-delay: 0.1s; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <h1 class="masthead-title">Agent <span class="mono">organigrama</span></h1>
+    <div class="masthead-meta">E-Companion<br>9 agents · <span class="mono">.claude/agents/</span></div>
+  </header>
+
+  <p class="lede">
+    How a goal moves through the system: the <strong>po</strong> agent reads the three
+    session files, then delegates to whichever specialist fits — <strong>Sonnet 5</strong>
+    for judgment calls, <strong>Haiku 4.5</strong> for mechanical, structured work.
+  </p>
+
+  <section class="chart">
+    <div class="section-label">flow</div>
+
+    <div class="inputs-row fade-in">
+      <div class="input-chip">
+        <span class="name">AGENTS.md</span>
+        <span class="desc">stack, conventions, postmortems</span>
+      </div>
+      <div class="input-chip">
+        <span class="name">STATUS.md</span>
+        <span class="desc">sprint, blockers, decisions</span>
+      </div>
+      <div class="input-chip">
+        <span class="name">BACKLOG.md</span>
+        <span class="desc">P0 → P3 tasks</span>
+      </div>
+      <div class="input-chip">
+        <span class="name">git log</span>
+        <span class="desc">last 10 commits</span>
+      </div>
+    </div>
+
+    <div class="stem"></div>
+    <div class="arrow"></div>
+
+    <div class="hub fade-in">
+      <span class="badge">+ learning cycle</span>
+      <div class="role">orchestrator</div>
+      <div class="name">po</div>
+      <div class="model">Sonnet 5 · Read, Glob, Grep, Bash, Agent, Write</div>
+    </div>
+
+    <div class="stem"></div>
+
+    <div class="branches">
+      <div class="branch-line"><div class="h"></div><div class="v"></div></div>
+      <div class="branch-line"><div class="h"></div><div class="v"></div></div>
+    </div>
+
+    <div class="tiers fade-in">
+      <div class="tier sonnet">
+        <div class="tier-head">
+          <span class="label">judgment tier</span>
+          <span class="model-tag">Sonnet 5</span>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <div class="name">feature-planning</div>
+            <p class="trigger">Technical spec before any code is written — approach unclear or multiple systems touched.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+          <div class="card">
+            <div class="name">code-review</div>
+            <p class="trigger">Reviews a diff or set of changed files against project standards, before merge.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+          <div class="card">
+            <div class="name">security</div>
+            <p class="trigger">OWASP audit, auth review, injection / access-control checks.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tier haiku">
+        <div class="tier-head">
+          <span class="label">mechanical tier</span>
+          <span class="model-tag">Haiku 4.5</span>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <div class="name">backlog</div>
+            <p class="trigger">Creates or refines items in BACKLOG.md from goals or discoveries.</p>
+            <div class="tools">Read · Glob · Grep</div>
+          </div>
+          <div class="card">
+            <div class="name">qa</div>
+            <p class="trigger">Writes tests for a completed scope; targets minimum tests, maximum confidence.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+          <div class="card">
+            <div class="name">devops</div>
+            <p class="trigger">Deployment health, build/runtime failures, env config — before a release or when something breaks.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+          <div class="card">
+            <div class="name">infra-admin</div>
+            <p class="trigger">Audits Cloudflare, Supabase, Railway, DNS, env vars. Advisory only — never executes.</p>
+            <div class="tools">Read · Glob · Grep · Bash</div>
+          </div>
+          <div class="card">
+            <div class="name">docs</div>
+            <p class="trigger">Architecture diagrams, API reference, component trees, onboarding guides.</p>
+            <div class="tools">Read · Glob · Grep · Bash · Write</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="filesection">
+    <div class="section-label">where they live</div>
+    <div class="filemap">
+      <pre class="tree">e-companion/
+├── <span class="new">CLAUDE.md</span>              <span class="dim"># pointer → files below</span>
+├── AGENTS.md              <span class="dim"># stack, conventions, registry</span>
+├── STATUS.md               <span class="dim"># sprint state</span>
+├── BACKLOG.md               <span class="dim"># P0 → P3</span>
+├── BOOTSTRAP.md              <span class="dim"># copy-paste session starter</span>
+└── <span class="dir">.claude/agents/</span>
+    ├── po.md
+    ├── feature-planning.md
+    ├── code-review.md
+    ├── security.md
+    ├── backlog.md
+    ├── qa.md
+    ├── devops.md
+    ├── infra-admin.md
+    └── docs.md</pre>
+      <div class="filenote">
+        <p>Every agent is one markdown file — YAML frontmatter (<span class="mono">name</span>, <span class="mono">model</span>, <span class="mono">tools</span>) plus its runbook — in <strong>.claude/agents/</strong>. Adding a specialist means adding a file there; nothing else registers it.</p>
+        <p><strong>po.md</strong> is the only one with a standing <em>learning cycle</em>: once a P0 is fixed and verified, or a sprint ships, it looks back for durable patterns and either edits an agent file directly, adds a line to AGENTS.md → <span class="mono">Postmortems / Learnings</span>, or proposes a new agent for a real gap.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>companion.postiusgroup.com</span>
+    <span>github.com/nilpost/E-Companion</span>
+  </footer>
+
+</div>
