@@ -1,24 +1,35 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertPetSchema, insertPostSchema, insertCommentSchema, insertAppointmentSchema, insertHealthRecordSchema, insertActivitySchema, insertChatMessageSchema, insertProviderSchema } from "@shared/schema";
 import { WebSocketServer, WebSocket } from "ws";
 
+// Express doesn't catch rejections from async handlers, so an uncaught DB
+// error crashes the whole process. Route every handler through here so it
+// reaches the global error middleware via next(err) instead.
+function asyncHandler(
+  handler: (req: Request, res: Response, next: NextFunction) => Promise<any>,
+): RequestHandler {
+  return (req, res, next) => {
+    handler(req, res, next).catch(next);
+  };
+}
+
 export function registerRoutes(app: Express): Server {
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
   // Pets API
-  app.get("/api/pets", async (req, res) => {
+  app.get("/api/pets", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const pets = await storage.getPetsByOwner(req.user!.id);
     res.json(pets);
-  });
+  }));
 
-  app.post("/api/pets", async (req, res) => {
+  app.post("/api/pets", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const petData = insertPetSchema.parse({ ...req.body, ownerId: req.user!.id });
       const pet = await storage.createPet(petData);
@@ -26,34 +37,34 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid pet data" });
     }
-  });
+  }));
 
-  app.get("/api/pets/:id", async (req, res) => {
+  app.get("/api/pets/:id", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const pet = await storage.getPet(parseInt(req.params.id));
     if (!pet) return res.sendStatus(404);
-    
+
     // Check if user owns this pet
     if (pet.ownerId !== req.user!.id) return res.sendStatus(403);
-    
+
     res.json(pet);
-  });
+  }));
 
   // Posts API
-  app.get("/api/posts", async (req, res) => {
+  app.get("/api/posts", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
-    
+
     const posts = await storage.getPosts(limit, offset);
     res.json(posts);
-  });
+  }));
 
-  app.post("/api/posts", async (req, res) => {
+  app.post("/api/posts", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const postData = insertPostSchema.parse({ ...req.body, userId: req.user!.id });
       const post = await storage.createPost(postData);
@@ -61,34 +72,34 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid post data" });
     }
-  });
+  }));
 
-  app.get("/api/posts/:id", async (req, res) => {
+  app.get("/api/posts/:id", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const post = await storage.getPost(parseInt(req.params.id), req.user!.id);
     if (!post) return res.sendStatus(404);
-    
-    res.json(post);
-  });
 
-  app.delete("/api/posts/:id", async (req, res) => {
+    res.json(post);
+  }));
+
+  app.delete("/api/posts/:id", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const post = await storage.getPost(parseInt(req.params.id));
     if (!post) return res.sendStatus(404);
-    
+
     // Check if user owns this post
     if (post.userId !== req.user!.id) return res.sendStatus(403);
-    
+
     const deleted = await storage.deletePost(parseInt(req.params.id));
     res.json({ success: deleted });
-  });
+  }));
 
   // Comments API
-  app.post("/api/posts/:postId/comments", async (req, res) => {
+  app.post("/api/posts/:postId/comments", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const commentData = insertCommentSchema.parse({
         ...req.body,
@@ -100,27 +111,27 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid comment data" });
     }
-  });
+  }));
 
   // Likes API
-  app.post("/api/posts/:postId/like", async (req, res) => {
+  app.post("/api/posts/:postId/like", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const liked = await storage.toggleLike(req.user!.id, parseInt(req.params.postId));
     res.json({ liked });
-  });
+  }));
 
   // Appointments API
-  app.get("/api/appointments", async (req, res) => {
+  app.get("/api/appointments", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const appointments = await storage.getAppointmentsByOwner(req.user!.id);
     res.json(appointments);
-  });
+  }));
 
-  app.post("/api/appointments", async (req, res) => {
+  app.post("/api/appointments", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const appointmentData = insertAppointmentSchema.parse({ ...req.body, ownerId: req.user!.id });
       const appointment = await storage.createAppointment(appointmentData);
@@ -128,25 +139,25 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid appointment data" });
     }
-  });
+  }));
 
   // Health Records API
-  app.get("/api/pets/:petId/health", async (req, res) => {
+  app.get("/api/pets/:petId/health", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const pet = await storage.getPet(parseInt(req.params.petId));
     if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
-    
+
     const healthRecords = await storage.getHealthRecordsByPet(parseInt(req.params.petId));
     res.json(healthRecords);
-  });
+  }));
 
-  app.post("/api/pets/:petId/health", async (req, res) => {
+  app.post("/api/pets/:petId/health", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const pet = await storage.getPet(parseInt(req.params.petId));
     if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
-    
+
     try {
       const healthData = insertHealthRecordSchema.parse({
         ...req.body,
@@ -157,25 +168,25 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid health record data" });
     }
-  });
+  }));
 
   // Activities API
-  app.get("/api/pets/:petId/activities", async (req, res) => {
+  app.get("/api/pets/:petId/activities", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const pet = await storage.getPet(parseInt(req.params.petId));
     if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
-    
+
     const activities = await storage.getActivitiesByPet(parseInt(req.params.petId));
     res.json(activities);
-  });
+  }));
 
-  app.post("/api/pets/:petId/activities", async (req, res) => {
+  app.post("/api/pets/:petId/activities", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const pet = await storage.getPet(parseInt(req.params.petId));
     if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
-    
+
     try {
       const activityData = insertActivitySchema.parse({
         ...req.body,
@@ -184,58 +195,58 @@ export function registerRoutes(app: Express): Server {
         xpEarned: 50 // Simple XP calculation
       });
       const activity = await storage.createActivity(activityData);
-      
+
       // Award XP to user
       await storage.updateUser(req.user!.id, {
         xpPoints: req.user!.xpPoints + 50
       });
-      
+
       res.status(201).json(activity);
     } catch (error) {
       res.status(400).json({ message: "Invalid activity data" });
     }
-  });
+  }));
 
-  app.get("/api/activities/recent", async (req, res) => {
+  app.get("/api/activities/recent", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const activities = await storage.getRecentActivities(req.user!.id);
     res.json(activities);
-  });
+  }));
 
   // Badges API
-  app.get("/api/badges", async (req, res) => {
+  app.get("/api/badges", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const badges = await storage.getAllBadges();
     res.json(badges);
-  });
+  }));
 
-  app.get("/api/user/badges", async (req, res) => {
+  app.get("/api/user/badges", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const userBadges = await storage.getUserBadges(req.user!.id);
     res.json(userBadges);
-  });
+  }));
 
   // Chat API
-  app.get("/api/chat/rooms", async (req, res) => {
+  app.get("/api/chat/rooms", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const rooms = await storage.getChatRooms();
     res.json(rooms);
-  });
+  }));
 
-  app.get("/api/chat/rooms/:roomId/messages", async (req, res) => {
+  app.get("/api/chat/rooms/:roomId/messages", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const messages = await storage.getChatMessages(parseInt(req.params.roomId));
     res.json(messages);
-  });
+  }));
 
-  app.post("/api/chat/rooms/:roomId/messages", async (req, res) => {
+  app.post("/api/chat/rooms/:roomId/messages", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const messageData = insertChatMessageSchema.parse({
         ...req.body,
@@ -243,31 +254,31 @@ export function registerRoutes(app: Express): Server {
         senderId: req.user!.id
       });
       const message = await storage.createChatMessage(messageData);
-      
+
       // Broadcast to WebSocket clients
       broadcastToRoom(parseInt(req.params.roomId), {
         type: 'new_message',
         message: { ...message, sender: req.user! }
       });
-      
+
       res.status(201).json(message);
     } catch (error) {
       res.status(400).json({ message: "Invalid message data" });
     }
-  });
+  }));
 
   // Providers API
-  app.get("/api/providers", async (req, res) => {
+  app.get("/api/providers", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     const serviceType = req.query.service as string;
     const providers = await storage.getProviders(serviceType);
     res.json(providers);
-  });
+  }));
 
-  app.post("/api/providers", async (req, res) => {
+  app.post("/api/providers", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
     try {
       const providerData = insertProviderSchema.parse({ ...req.body, userId: req.user!.id });
       const provider = await storage.createProvider(providerData);
@@ -275,7 +286,7 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid provider data" });
     }
-  });
+  }));
 
   const httpServer = createServer(app);
 
