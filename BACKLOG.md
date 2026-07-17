@@ -7,7 +7,7 @@
 ---
 
 ## P0 — Blocking / Critical
-_Nothing blocking right now._
+- [ ] BUG-01: Production user registration/login failing (500 on /api/register, 502 on /api/login). Root cause: `passport-local` LocalStrategy verify callback and `deserializeUser` in `server/auth.ts` did not catch async errors, so a DB error thrown during login became an unhandled promise rejection and crashed the Node process (manifesting as 502 for all users, not just the one logging in). Fix implemented on branch `claude/user-creation-api-errors-k4gra4` (server/auth.ts, server/index.ts) but NOT yet committed/deployed — pending user confirmation given production impact. Also flagged: underlying trigger may be a transient Supabase DB connectivity issue (infra-admin audit requested, pending).
 
 ---
 
@@ -32,6 +32,7 @@ _Nothing blocking right now._
 
 ## P3 — Someday / Backlog
 
+- [ ] HARDEN-01: Wrap all async Express route handlers in server/routes.ts (23 routes) in try/catch or an asyncHandler wrapper — currently a DB error in any of them (e.g. GET /api/pets, POST /api/posts) becomes an unhandled promise rejection that can crash the whole Node process, same failure class as BUG-01.
 - [ ] FEAT-05: Push notifications for feeding reminders
 - [ ] FEAT-06: Multi-pet household support (shared access)
 - [ ] FEAT-07: Photo upload for pet profiles

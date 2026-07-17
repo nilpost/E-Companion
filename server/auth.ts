@@ -44,19 +44,30 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
-        return done(null, user);
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user || !(await comparePasswords(password, user.password))) {
+          return done(null, false);
+        } else {
+          return done(null, user);
+        }
+      } catch (err) {
+        // passport-local does not await this callback, so an uncaught
+        // rejection here (e.g. a DB error) becomes an unhandled promise
+        // rejection and crashes the process. Always resolve via done().
+        return done(err);
       }
     }),
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {
@@ -90,6 +101,11 @@ export function setupAuth(app: Express) {
           fieldErrors[path] = err.message;
         });
         return res.status(400).json({ message: "Validation failed", errors: fieldErrors });
+      }
+      // Postgres unique_violation (23505): can still occur despite the
+      // pre-checks above under concurrent/duplicate submits (race condition).
+      if ((error as any)?.code === "23505") {
+        return res.status(400).json({ message: "Username or email already exists" });
       }
       next(error);
     }
