@@ -1,5 +1,5 @@
-import { users, pets, posts, comments, likes, appointments, healthRecords, activities, badges, userBadges, chatRooms, chatMessages, chatParticipants, providers } from "@shared/schema";
-import { type User, type InsertUser, type Pet, type InsertPet, type Post, type InsertPost, type Comment, type InsertComment, type Appointment, type InsertAppointment, type HealthRecord, type InsertHealthRecord, type Activity, type InsertActivity, type Badge, type UserBadge, type ChatRoom, type ChatMessage, type InsertChatMessage, type ChatParticipant, type Provider, type InsertProvider } from "@shared/schema";
+import { users, pets, posts, comments, likes, appointments, healthRecords, activities, badges, userBadges, chatRooms, chatMessages, chatParticipants, providers, reminders } from "@shared/schema";
+import { type User, type InsertUser, type Pet, type InsertPet, type Post, type InsertPost, type Comment, type InsertComment, type Appointment, type InsertAppointment, type HealthRecord, type InsertHealthRecord, type Activity, type InsertActivity, type Badge, type UserBadge, type ChatRoom, type ChatMessage, type InsertChatMessage, type ChatParticipant, type Provider, type InsertProvider, type Reminder, type InsertReminder } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 import session from "express-session";
@@ -66,6 +66,13 @@ export interface IStorage {
   getProviders(serviceType?: string): Promise<(Provider & { user: User })[]>;
   getProvider(userId: number): Promise<Provider | undefined>;
   createProvider(provider: InsertProvider): Promise<Provider>;
+
+  // Reminders
+  getRemindersByPet(petId: number): Promise<Reminder[]>;
+  getReminder(id: number): Promise<Reminder | undefined>;
+  createReminder(reminder: InsertReminder): Promise<Reminder>;
+  updateReminder(id: number, updates: Partial<Reminder>): Promise<Reminder | undefined>;
+  deleteReminder(id: number): Promise<boolean>;
 
   sessionStore: session.SessionStore;
 }
@@ -468,6 +475,35 @@ export class DatabaseStorage implements IStorage {
   async createProvider(insertProvider: InsertProvider): Promise<Provider> {
     const [provider] = await db.insert(providers).values(insertProvider).returning();
     return provider;
+  }
+
+  // Reminders
+  async getRemindersByPet(petId: number): Promise<Reminder[]> {
+    return await db
+      .select()
+      .from(reminders)
+      .where(eq(reminders.petId, petId))
+      .orderBy(reminders.dueAt);
+  }
+
+  async getReminder(id: number): Promise<Reminder | undefined> {
+    const [reminder] = await db.select().from(reminders).where(eq(reminders.id, id));
+    return reminder || undefined;
+  }
+
+  async createReminder(insertReminder: InsertReminder): Promise<Reminder> {
+    const [reminder] = await db.insert(reminders).values(insertReminder).returning();
+    return reminder;
+  }
+
+  async updateReminder(id: number, updates: Partial<Reminder>): Promise<Reminder | undefined> {
+    const [reminder] = await db.update(reminders).set(updates).where(eq(reminders.id, id)).returning();
+    return reminder || undefined;
+  }
+
+  async deleteReminder(id: number): Promise<boolean> {
+    const result = await db.delete(reminders).where(eq(reminders.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
