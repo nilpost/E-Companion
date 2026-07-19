@@ -393,7 +393,15 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true
 });
 
-export const insertReminderSchema = createInsertSchema(reminders).omit({
+// z.coerce.date() on timestamp columns: createInsertSchema otherwise produces
+// z.date(), which rejects the ISO strings every JSON client actually sends
+// (JSON has no Date type). Plain z.date() on a timestamp column is a
+// pre-existing bug shared by insertAppointmentSchema/insertHealthRecordSchema
+// (see BACKLOG.md) — not fixed here since it's out of scope for this feature,
+// but not repeated in this new schema either.
+export const insertReminderSchema = createInsertSchema(reminders, {
+  dueAt: z.coerce.date(),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -403,7 +411,9 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({
 // Ownership (petId, ownerId) is set from the authenticated request, never
 // from the client — a PATCH must not be able to reassign a reminder to a
 // different pet or owner.
-export const updateReminderSchema = createInsertSchema(reminders).omit({
+export const updateReminderSchema = createInsertSchema(reminders, {
+  dueAt: z.coerce.date(),
+}).omit({
   id: true,
   petId: true,
   ownerId: true,
