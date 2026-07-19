@@ -400,6 +400,17 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({
   completedAt: true
 });
 
+// Ownership (petId, ownerId) is set from the authenticated request, never
+// from the client — a PATCH must not be able to reassign a reminder to a
+// different pet or owner.
+export const updateReminderSchema = createInsertSchema(reminders).omit({
+  id: true,
+  petId: true,
+  ownerId: true,
+  createdAt: true,
+  updatedAt: true
+}).partial();
+
 export const insertProviderSchema = createInsertSchema(providers).omit({
   id: true,
   createdAt: true,

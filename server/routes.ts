@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction, RequestHandler } from "e
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertPetSchema, insertPostSchema, insertCommentSchema, insertAppointmentSchema, insertHealthRecordSchema, insertActivitySchema, insertChatMessageSchema, insertProviderSchema, insertReminderSchema } from "@shared/schema";
+import { insertPetSchema, insertPostSchema, insertCommentSchema, insertAppointmentSchema, insertHealthRecordSchema, insertActivitySchema, insertChatMessageSchema, insertProviderSchema, insertReminderSchema, updateReminderSchema } from "@shared/schema";
 import { WebSocketServer, WebSocket } from "ws";
 
 // Express doesn't catch rejections from async handlers, so an uncaught DB
@@ -326,7 +326,7 @@ export function registerRoutes(app: Express): Server {
     if (reminder.ownerId !== req.user!.id) return res.sendStatus(403);
 
     try {
-      const updates = insertReminderSchema.partial().parse(req.body);
+      const updates = updateReminderSchema.parse(req.body);
       const updated = await storage.updateReminder(parseInt(req.params.id), updates);
       res.json(updated);
     } catch (error) {
