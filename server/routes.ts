@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction, RequestHandler } from "e
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertPetSchema, insertPostSchema, insertCommentSchema, insertAppointmentSchema, insertHealthRecordSchema, insertActivitySchema, insertChatMessageSchema, insertProviderSchema } from "@shared/schema";
+import { insertPetSchema, insertPostSchema, insertCommentSchema, insertAppointmentSchema, insertHealthRecordSchema, insertActivitySchema, insertChatMessageSchema, insertProviderSchema, insertReminderSchema } from "@shared/schema";
 import { WebSocketServer, WebSocket } from "ws";
 
 // Express doesn't catch rejections from async handlers, so an uncaught DB
@@ -286,6 +286,63 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       res.status(400).json({ message: "Invalid provider data" });
     }
+  }));
+
+  // Reminders API
+  app.get("/api/pets/:petId/reminders", asyncHandler(async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const pet = await storage.getPet(parseInt(req.params.petId));
+    if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
+
+    const petReminders = await storage.getRemindersByPet(parseInt(req.params.petId));
+    res.json(petReminders);
+  }));
+
+  app.post("/api/pets/:petId/reminders", asyncHandler(async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const pet = await storage.getPet(parseInt(req.params.petId));
+    if (!pet || pet.ownerId !== req.user!.id) return res.sendStatus(403);
+
+    try {
+      const reminderData = insertReminderSchema.parse({
+        ...req.body,
+        petId: parseInt(req.params.petId),
+        ownerId: req.user!.id
+      });
+      const reminder = await storage.createReminder(reminderData);
+      res.status(201).json(reminder);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid reminder data" });
+    }
+  }));
+
+  app.patch("/api/reminders/:id", asyncHandler(async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const reminder = await storage.getReminder(parseInt(req.params.id));
+    if (!reminder) return res.sendStatus(404);
+    if (reminder.ownerId !== req.user!.id) return res.sendStatus(403);
+
+    try {
+      const updates = insertReminderSchema.partial().parse(req.body);
+      const updated = await storage.updateReminder(parseInt(req.params.id), updates);
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid reminder data" });
+    }
+  }));
+
+  app.delete("/api/reminders/:id", asyncHandler(async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const reminder = await storage.getReminder(parseInt(req.params.id));
+    if (!reminder) return res.sendStatus(404);
+    if (reminder.ownerId !== req.user!.id) return res.sendStatus(403);
+
+    const deleted = await storage.deleteReminder(parseInt(req.params.id));
+    res.json({ success: deleted });
   }));
 
   const httpServer = createServer(app);

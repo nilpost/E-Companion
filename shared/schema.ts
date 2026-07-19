@@ -161,6 +161,22 @@ export const chatParticipants = pgTable("chat_participants", {
   lastReadAt: timestamp("last_read_at")
 });
 
+export const reminders = pgTable("reminders", {
+  id: serial("id").primaryKey(),
+  petId: integer("pet_id").references(() => pets.id),
+  ownerId: integer("owner_id").references(() => users.id),
+  careType: text("care_type").notNull(), // feeding, medication, grooming, vet_visit, other
+  title: text("title").notNull(),
+  description: text("description"),
+  scheduleType: text("schedule_type").notNull().default("one_time"), // one_time, recurring
+  dueAt: timestamp("due_at").notNull(),
+  recurrenceRule: text("recurrence_rule"),
+  isActive: boolean("is_active").default(true),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
 export const providers = pgTable("providers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
@@ -183,6 +199,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   ownedAppointments: many(appointments, { relationName: "owner" }),
   providedAppointments: many(appointments, { relationName: "provider" }),
   activities: many(activities),
+  reminders: many(reminders),
   userBadges: many(userBadges),
   chatMessages: many(chatMessages),
   chatParticipants: many(chatParticipants),
@@ -197,7 +214,8 @@ export const petsRelations = relations(pets, ({ one, many }) => ({
   posts: many(posts),
   appointments: many(appointments),
   healthRecords: many(healthRecords),
-  activities: many(activities)
+  activities: many(activities),
+  reminders: many(reminders)
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
@@ -307,6 +325,17 @@ export const chatParticipantsRelations = relations(chatParticipants, ({ one }) =
   })
 }));
 
+export const remindersRelations = relations(reminders, ({ one }) => ({
+  pet: one(pets, {
+    fields: [reminders.petId],
+    references: [pets.id]
+  }),
+  owner: one(users, {
+    fields: [reminders.ownerId],
+    references: [users.id]
+  })
+}));
+
 export const providersRelations = relations(providers, ({ one }) => ({
   user: one(users, {
     fields: [providers.userId],
@@ -364,6 +393,13 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true
 });
 
+export const insertReminderSchema = createInsertSchema(reminders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true
+});
+
 export const insertProviderSchema = createInsertSchema(providers).omit({
   id: true,
   createdAt: true,
@@ -395,3 +431,5 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatParticipant = typeof chatParticipants.$inferSelect;
 export type Provider = typeof providers.$inferSelect;
 export type InsertProvider = z.infer<typeof insertProviderSchema>;
+export type Reminder = typeof reminders.$inferSelect;
+export type InsertReminder = z.infer<typeof insertReminderSchema>;
