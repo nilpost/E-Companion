@@ -370,19 +370,30 @@ export const insertCommentSchema = createInsertSchema(comments).omit({
   createdAt: true
 });
 
-export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+// dueAt/startTime/endTime/date use z.coerce.date(): createInsertSchema
+// otherwise produces plain z.date() for a timestamp column, which rejects
+// every ISO string a real JSON client sends (JSON has no Date type) — see
+// BUG-02 in BACKLOG.md.
+export const insertAppointmentSchema = createInsertSchema(appointments, {
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
   status: true
 });
 
-export const insertHealthRecordSchema = createInsertSchema(healthRecords).omit({
+export const insertHealthRecordSchema = createInsertSchema(healthRecords, {
+  date: z.coerce.date(),
+}).omit({
   id: true,
   createdAt: true
 });
 
-export const insertActivitySchema = createInsertSchema(activities).omit({
+export const insertActivitySchema = createInsertSchema(activities, {
+  date: z.coerce.date().optional(),
+}).omit({
   id: true,
   createdAt: true,
   xpEarned: true
@@ -393,12 +404,6 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true
 });
 
-// z.coerce.date() on timestamp columns: createInsertSchema otherwise produces
-// z.date(), which rejects the ISO strings every JSON client actually sends
-// (JSON has no Date type). Plain z.date() on a timestamp column is a
-// pre-existing bug shared by insertAppointmentSchema/insertHealthRecordSchema
-// (see BACKLOG.md) — not fixed here since it's out of scope for this feature,
-// but not repeated in this new schema either.
 export const insertReminderSchema = createInsertSchema(reminders, {
   dueAt: z.coerce.date(),
 }).omit({
@@ -413,6 +418,7 @@ export const insertReminderSchema = createInsertSchema(reminders, {
 // different pet or owner.
 export const updateReminderSchema = createInsertSchema(reminders, {
   dueAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable().optional(),
 }).omit({
   id: true,
   petId: true,
