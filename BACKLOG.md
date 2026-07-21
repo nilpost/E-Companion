@@ -17,6 +17,8 @@
 - [x] HARDEN-01: Wrap all async Express route handlers in server/routes.ts (23 routes) in try/catch or an asyncHandler wrapper — currently a DB error in any of them (e.g. GET /api/pets, POST /api/posts) becomes an unhandled promise rejection that can crash the whole Node process, same failure class as BUG-01. Escalated from P3 to P1 2026-07-17 given BUG-01 confirmed this failure class caused a production outage. Fix merged via PR #5 (server/routes.ts, asyncHandler wrapper). ✅ 2026-07-17
 - [x] DOCS-03: Capture BUG-01/HARDEN-01 as a postmortem in AGENTS.md, add a PO retrospective ("learning cycle"), flag devops/infra-admin's lack of live-network access, add CLAUDE.md pointer and a visual agent organigrama. Merged via PR #6. ✅ 2026-07-17
 - [x] FEAT-01: Implement feeding/care reminder CRUD (create, list, edit, delete reminders per pet). Backend only — `reminders` table + relations + schema in shared/schema.ts, storage functions in server/storage.ts, 4 asyncHandler-wrapped + ownership-checked routes in server/routes.ts (GET/POST /api/pets/:petId/reminders, PATCH/DELETE /api/reminders/:id). code-review caught and fixed a HIGH-severity ownership-bypass on PATCH (client could reassign ownerId/petId). PR pending. **`npx drizzle-kit push` still needs to run against the real database before these routes work — no DB credentials in this sandbox to do it.** ✅ 2026-07-19
+- [x] ENV-01: Env-var audit of Railway/Supabase config vs. AGENTS.md/BOOTSTRAP.md docs. Fixed three documented-vs-actual gaps: `drizzle.config.ts` now prefers `DATABASE_URL_DIRECT ?? DATABASE_URL` for `drizzle-kit push` (was silently using the pooler); `server/auth.ts` fail-fast guards `SESSION_SECRET` instead of a `!` non-null assertion, matching the `DATABASE_URL` guard in `server/db.ts`; `.env.example` now documents `DATABASE_URL_DIRECT` and `PORT`. PR #14, ready for review, mergeable_state clean. ✅ 2026-07-21
+- [ ] PR-14: Merge PR #14 (branch `claude/chrome-remote-control-v5s1ip`) once reviewed
 - [ ] FEAT-02: Display active reminders on pet dashboard (client UI — consumes the FEAT-01 API)
 - [ ] CHORE-01: Write BACKLOG.md + STATUS.md workflow into team habit (done when first agent cycle completes)
 
@@ -30,6 +32,7 @@
 - [x] QA-02: Reminder CRUD API test coverage. First tests in the repo — introduced vitest + supertest (`npm test`, `vitest.config.ts`), 18 tests covering auth/ownership (401/403), 404-before-403 ordering, happy path, and validation for all 4 reminder routes. ✅ 2026-07-19
 - [ ] DOCS-01: Generate API reference (all /api/* routes)
 - [ ] DOCS-02: Architecture diagram (frontend → backend → DB → infra)
+- [ ] INFRA-06: Set `DATABASE_URL_DIRECT` in Railway service variables (Supabase → Settings → Database → direct connection, port 5432). Human/infra action — PR #14 wires `drizzle.config.ts` to prefer this var for `drizzle-kit push`, but until it's actually set on Railway, pushes keep falling back to the pooler. Blocks nothing today (pooler still works for DDL Drizzle has used so far) but should land before the next schema push.
 
 ---
 

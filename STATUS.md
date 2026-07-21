@@ -19,7 +19,9 @@ Get feeding/care reminders fully functional end-to-end (FEAT-01, FEAT-02).
 | FEAT-02 | — | 2026-07-19 | Backend (FEAT-01) is done and merge-ready; dashboard UI not started |
 
 ## Blockers
-_None currently open._
+| Item | Why | Unblocks when |
+|------|-----|----------------|
+| `DATABASE_URL_DIRECT` not set in Railway service variables | PR #14 wires `drizzle.config.ts` to prefer `DATABASE_URL_DIRECT` for `drizzle-kit push`, but the variable itself isn't set on Railway yet, so pushes still silently fall back through the Supabase pooler until it is | Human sets `DATABASE_URL_DIRECT` in Railway (Supabase → Settings → Database → direct connection, port 5432); tracked as INFRA-06 |
 
 ## Decisions log
 | Date | Decision | Why |
@@ -40,6 +42,7 @@ _None currently open._
 | 2026-07-21 | Root-caused "cannot create a user from web portal" (BUG-03) to Railway's `DATABASE_URL` pointing at Supabase's **IPv6-only direct host** (`db.<ref>.supabase.co:5432`), which Railway can't route → every DB query fails to connect (app boots "Online", but 0 rows, no `session` table, no ERROR logs, no app connections in `pg_stat_activity`). Fix: repoint `DATABASE_URL` to the IPv4 Supavisor **pooler** (`postgres.<ref>@aws-0-ap-northeast-1.pooler.supabase.com:6543`), as `.env.example` already prescribes. Diagnosed via Supabase MCP + DNS (direct host has no A record; pooler host resolves IPv4). See postmortem in AGENTS.md | The app uses Supabase purely as Postgres (Passport/Drizzle, not Supabase Auth), so the only wire is `DATABASE_URL`; a direct-vs-pooler mismatch silently breaks all persistence |
 | 2026-07-21 | Removed a rogue `ensure_rls` event trigger + `public.rls_auto_enable()` SECURITY DEFINER function that was auto-enabling RLS on every new `public` table, leaving all app tables with RLS ON and zero policies (`rls_enabled_no_policy` on all 14). Dropped both and disabled RLS across the public schema (migration `remove_rogue_rls_auto_enable_and_disable_rls`) | Not part of the Drizzle app — a manually-added change that fights the app's model (trusted DB connection, auth enforced in Express). Currently masked only because the `postgres` role has `BYPASSRLS`; a latent landmine if the app ever connects as a non-superuser role, and it would have re-enabled RLS on the `session` table on first boot |
 | 2026-07-21 | Created the missing `public.reminders` table via Supabase MCP (migration `create_reminders_table`), matching `shared/schema.ts` exactly | FEAT-01 added `reminders` to the schema but it was never pushed to this DB; created ahead of the redeploy so reminder routes don't 500. A later `npm run db:push` is a no-op for it |
+| 2026-07-21 | Ran an env-var audit (Railway/Supabase config vs. AGENTS.md/BOOTSTRAP.md docs) and merged PR #14 | Found three documented-vs-actual gaps: (1) `drizzle.config.ts` read only `DATABASE_URL`, so `drizzle-kit push` silently ran through the Supabase pooler despite docs claiming a direct connection — now prefers `DATABASE_URL_DIRECT ?? DATABASE_URL`, using the Supavisor **session-mode** pooler (port 5432, IPv4-safe for Railway) rather than the IPv6-only direct host that BUG-03 above showed Railway can't route; (2) `server/auth.ts` used a `!` non-null assertion on `SESSION_SECRET` instead of a fail-fast guard, unlike the equivalent `DATABASE_URL` guard in `server/db.ts` — now guarded with a clear startup error; (3) `.env.example` didn't document `DATABASE_URL_DIRECT` or `PORT` — now documents both. Runtime app connection (`server/db.ts`) unchanged; `npm run check` clean for changed files (pre-existing unrelated errors remain in `server/storage.ts` and `client/src/hooks/use-auth.tsx`, tracked as CHORE-07) |
 
 ## Agent team status
 | Agent | Status |
