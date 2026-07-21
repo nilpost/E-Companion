@@ -1,7 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
-// Migrations use the direct connection (bypasses the Supabase pooler, which
-// doesn't support all session-level DDL). Fall back to the pooled URL when
+// Migrations use the session-mode pooler connection (Supavisor port 5432), which
+// supports the session-level DDL that transaction mode (6543, DATABASE_URL) doesn't,
+// while staying IPv4-compatible for Railway. Fall back to the pooled URL when
 // DATABASE_URL_DIRECT isn't set.
 const migrationUrl = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
 

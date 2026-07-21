@@ -79,7 +79,7 @@ nixpacks.toml         ← Railway build config
 | Schema file | `shared/schema.ts` |
 | Migration style | Push-based (`npx drizzle-kit push`) — no migration files |
 | Runtime connection | `DATABASE_URL` env var |
-| Migration connection | `DATABASE_URL_DIRECT` env var (bypasses Supabase pooler) |
+| Migration connection | `DATABASE_URL_DIRECT` env var (Supavisor session-mode pooler, port 5432) |
 
 ---
 
@@ -88,7 +88,7 @@ nixpacks.toml         ← Railway build config
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `DATABASE_URL` | yes | Supabase connection string (pooled) |
-| `DATABASE_URL_DIRECT` | migrations only | Direct connection — use for `drizzle-kit push`. **As of 2026-07-21, `drizzle.config.ts` code reads this correctly (PR #14), but the value itself still needs to be set in Railway's service variables — see STATUS.md blockers / BACKLOG.md INFRA-06.** |
+| `DATABASE_URL_DIRECT` | migrations only | Supavisor **session-mode** pooler (`...pooler.supabase.com:5432`) — use for `drizzle-kit push`. Session mode supports session-level DDL and is IPv4-safe for Railway; the direct `db.<ref>.supabase.co:5432` endpoint is IPv6-only and fails from Railway. **As of 2026-07-21, `drizzle.config.ts` code reads this correctly (PR #14), but the value itself still needs to be set in Railway's service variables — see STATUS.md blockers / BACKLOG.md INFRA-06.** |
 | `SESSION_SECRET` | yes | Passport session secret — must be long random string in prod |
 | `NODE_ENV` | yes | `production` on Railway, `development` locally |
 | `PORT` | no | Railway sets this automatically; defaults to 5000 locally |
