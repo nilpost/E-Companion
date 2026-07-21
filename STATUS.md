@@ -17,9 +17,12 @@ Get feeding/care reminders fully functional end-to-end (FEAT-01, FEAT-02).
 | Item | Owner | Started | Notes |
 |------|-------|---------|-------|
 | FEAT-02 | — | 2026-07-19 | Backend (FEAT-01) is done and merge-ready; dashboard UI not started |
+| PR #14 — env-var audit (drizzle direct connection, SESSION_SECRET guard, .env.example) | — | 2026-07-21 | Ready for review, mergeable_state clean; not yet merged |
 
 ## Blockers
-_None currently open._
+| Item | Why | Unblocks when |
+|------|-----|----------------|
+| `DATABASE_URL_DIRECT` not set in Railway service variables | PR #14 wires `drizzle.config.ts` to prefer `DATABASE_URL_DIRECT` for `drizzle-kit push`, but the variable itself isn't set on Railway yet, so pushes still silently fall back through the Supabase pooler until it is | Human sets `DATABASE_URL_DIRECT` in Railway (Supabase → Settings → Database → direct connection, port 5432); tracked as INFRA-06 |
 
 ## Decisions log
 | Date | Decision | Why |
@@ -37,6 +40,7 @@ _None currently open._
 | 2026-07-19 | Logged BUG-02 (P1) rather than fixing it now | `createInsertSchema` on a `timestamp` column produces `z.date()`, which rejects the ISO strings any real JSON client sends — confirmed on `insertAppointmentSchema` too, but latent since no client UI creates appointments/health records/activities yet. Fixed only for the new reminders schema; flagged so it's fixed before FEAT-02 or FEAT-03 builds a creation form on one of the other three |
 | 2026-07-19 | Fixed BUG-02 for real (`insertAppointmentSchema`, `insertHealthRecordSchema`, `insertActivitySchema`) | User asked for it explicitly; same one-line `z.coerce.date()` fix as reminders, verified against all four schemas with an ISO-string payload |
 | 2026-07-19 | Added `server/seed.ts` + `npm run db:seed` for reference/dummy data | User wants a reference dataset in the DB; this sandbox has no `DATABASE_URL`/`DATABASE_URL_DIRECT`, so the script is written and typechecked but **not yet run against a real database** — needs `drizzle-kit push` first, then `npm run db:seed`, from an environment with DB credentials |
+| 2026-07-21 | Ran an env-var audit (Railway/Supabase config vs. AGENTS.md/BOOTSTRAP.md docs) and opened PR #14, now ready for review with a clean mergeable_state | Found three documented-vs-actual gaps: (1) `drizzle.config.ts` read only `DATABASE_URL`, so `drizzle-kit push` silently ran through the Supabase pooler despite docs claiming a direct connection — now prefers `DATABASE_URL_DIRECT ?? DATABASE_URL`; (2) `server/auth.ts` used a `!` non-null assertion on `SESSION_SECRET` instead of a fail-fast guard, unlike the equivalent `DATABASE_URL` guard in `server/db.ts` — now guarded with a clear startup error; (3) `.env.example` didn't document `DATABASE_URL_DIRECT` or `PORT` — now documents both. Runtime app connection (`server/db.ts`) unchanged; `npm run check` clean for changed files (pre-existing unrelated errors remain in `server/storage.ts` and `client/src/hooks/use-auth.tsx`, tracked as CHORE-07) |
 
 ## Agent team status
 | Agent | Status |

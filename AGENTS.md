@@ -88,7 +88,7 @@ nixpacks.toml         ← Railway build config
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `DATABASE_URL` | yes | Supabase connection string (pooled) |
-| `DATABASE_URL_DIRECT` | migrations only | Direct connection — use for `drizzle-kit push` |
+| `DATABASE_URL_DIRECT` | migrations only | Direct connection — use for `drizzle-kit push`. **As of 2026-07-21, `drizzle.config.ts` code reads this correctly (PR #14), but the value itself still needs to be set in Railway's service variables — see STATUS.md blockers / BACKLOG.md INFRA-06.** |
 | `SESSION_SECRET` | yes | Passport session secret — must be long random string in prod |
 | `NODE_ENV` | yes | `production` on Railway, `development` locally |
 | `PORT` | no | Railway sets this automatically; defaults to 5000 locally |
@@ -131,6 +131,7 @@ npm run dev
   - `server/auth.ts`: passport callbacks (`LocalStrategy` verify, `deserializeUser`) now wrap their bodies in try/catch and resolve errors via `done(err)`.
   - `server/routes.ts`: all route handlers go through the `asyncHandler` wrapper (top of file), which forwards rejections to `next(err)` → the global error middleware in `server/index.ts`. **Any new route added to this file must use `asyncHandler`.**
   - General rule: a raw `async (req, res) => {...}` route handler with no `asyncHandler`/try-catch is a bug, not a style choice.
+- **2026-07-21 — Docs can describe env-var wiring that the code never implements (ENV-01)**: `AGENTS.md`/`BOOTSTRAP.md` documented `DATABASE_URL_DIRECT` as "the migration connection," but `drizzle.config.ts` only ever read `DATABASE_URL` — so every `drizzle-kit push` silently ran through the Supabase pooler, and the docs were describing an intent, not a fact. Same audit also found `SESSION_SECRET` read via a `!` non-null assertion (crashes with a cryptic express-session error on a missing var) instead of the fail-fast guard pattern already used for `DATABASE_URL` in `server/db.ts`. Fixed in PR #14. General rule: when a config table in AGENTS.md names a specific env var for a specific purpose, treat that as a claim to verify against the actual code path (`grep` for `process.env.<VAR>`), not a fact to take on faith — doc and code drift silently because nothing fails loudly when a fallback (the pooler, a stale assertion) papers over the gap. `infra-admin`/`devops` env-var audits should grep for each documented var's actual usage site, not just its presence in `.env.example`.
 
 ---
 
