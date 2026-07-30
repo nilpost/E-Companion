@@ -28,6 +28,9 @@
 
 ## P2 — Next Sprint
 
+- [ ] BUG-03: `client/src/components/tab-navigation.tsx` hardcodes English tab labels (`"Home"`, `"Community"`, `"Booking"`, `"Health"`, `"Chat"`) even though `client/src/lib/i18n.ts` already defines `nav.home` / `nav.community` / `nav.booking` / `nav.health` / `nav.chat` with Japanese translations. The strings exist and are simply not wired up, so a Japanese user sees an English nav bar on a JP-market app. Quick win: import the translation helper and key off the existing entries. Found 2026-07-30 while reviewing the archived pet-care prototypes.
+- [ ] SALV-01: **Provider-side dashboard.** The `providers` table exists and `booking-view.tsx` consumes `Provider` from the owner side, but service providers have no UI of their own — no way to manage a business profile, see incoming bookings, or set availability. Both archived prototypes had built one: `waggle-pal-connect/src/components/dashboard/ProviderDashboard.tsx` (React + shadcn, closest to this stack) and `PetPal-Proto2/components/dashboard/ProviderDashboard.tsx` (React Native). Salvaged from the 2026-07-30 kill decision — see `studio-ops/decisions/2026-07-30-opening-triage.md`.
+- [ ] SALV-02: **Dedicated gamification view.** `badges` and `user_badges` tables exist but are only surfaced incidentally in `dashboard-view.tsx`. `PetPal-Proto2/app/(tabs)/gamification.tsx` + `store/gamificationStore.ts` show the intended shape: XP, levels, badge grid, leaderboard. Reference only — the store is Zustand and this app uses TanStack Query.
 - [ ] FEAT-03: Health event logging (vet visits, medications, weight tracking)
 - [ ] FEAT-04: Health history view per pet
 - [ ] QA-01: Auth flow test coverage (register, login, logout, session expiry)
@@ -44,7 +47,11 @@
 - [ ] FEAT-05: Push notifications for feeding reminders
 - [ ] FEAT-06: Multi-pet household support (shared access)
 - [ ] FEAT-07: Photo upload for pet profiles
-- [ ] FEAT-08: Mobile PWA (offline support)
+- [ ] FEAT-08: Mobile PWA (offline support). Note (2026-07-30): the archived `PetPal-Proto2` is a working Expo/React Native shell for this same product (Expo Router tabs, 7 Zustand domain stores, Noto Sans JP + Inter fonts, expo-camera/haptics). If native ever beats PWA for this market, that repo is the starting point rather than a fresh build — but it shares no code with this stack, so treat it as a reference, not a migration path.
+- [ ] SALV-03: **3D pet mascot.** `waggle-pal-connect/src/components/3d/PetMascot.tsx` implements the "e-mascot" concept with `three` + `@react-three/fiber` + `@react-three/drei`; `PetPal-Proto2/components/gamification/EMascotViewer.tsx` is the native equivalent. This app has no 3D dependencies today. It was the most distinctive feature of both archived prototypes and the main thing lost by killing them — worth a spike before deciding it is not wanted. Cost: three.js is a heavy dependency, so weigh it against SALV-02 landing first.
+- [ ] SALV-04: **Provider analytics view.** `PetPal-Proto2/app/(tabs)/analytics.tsx` + `store/analyticsStore.ts` — revenue tracking, booking insights, performance metrics for the provider side. Depends on SALV-01; pointless without a provider UI to hang it off.
+- [ ] SALV-05: **Calendar view.** `PetPal-Proto2/app/(tabs)/calendar.tsx` — a month/week calendar over appointments. This app has `booking-view.tsx` (a booking flow) and the shadcn `calendar` primitive, but no calendar *view* of existing appointments.
+- [ ] SALV-06: **Consider migrating i18n to `i18next`.** `client/src/lib/i18n.ts` is a hand-rolled 600-line `{key: {en, ja}}` map with no language detection, no pluralization, no namespacing, and no switcher UI. `waggle-pal-connect` used `i18next` + `react-i18next` + `i18next-browser-languagedetector` with a `LanguageSwitcher.tsx` component. Not urgent — the current map works — but revisit before the string count grows further or a third locale is added. Fix BUG-03 first regardless; it is independent of this.
 - [ ] CHORE-02: Mobile-responsive polish pass
 - [ ] CHORE-03: E2E test suite (Playwright)
 - [ ] SEC-01: Rate limiting on auth routes
