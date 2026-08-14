@@ -19,6 +19,7 @@ vi.mock("./storage", () => ({
     createReminder: vi.fn(),
     updateReminder: vi.fn(),
     deleteReminder: vi.fn(),
+    ping: vi.fn(),
   },
 }));
 

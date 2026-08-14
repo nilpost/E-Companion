@@ -37,8 +37,8 @@ Pet care companion app. Users manage pets, schedule feeding/care reminders, and 
 | Auth | Passport.js — session-based (not JWT) |
 | ORM | Drizzle ORM |
 | Database | PostgreSQL via Supabase |
-| Hosting | Railway — auto-deploys from `main` branch |
-| DNS / CDN | Cloudflare — `companion.postiusgroup.com` |
+| Hosting | Synology NAS (Docker Compose) as of 2026-08-13 — was Railway until the trial expired, see INFRA-07. No auto-deploy yet (INFRA-11) |
+| DNS / CDN | Cloudflare — `companion.postiusgroup.com`, published from the NAS via Cloudflare Tunnel (`cloudflared`) |
 
 ---
 
@@ -64,7 +64,10 @@ client/src/
   lib/                ← utilities, API client
 
 .claude/agents/       ← agent definitions (all agents live here)
-nixpacks.toml         ← Railway build config
+Dockerfile            ← NAS/container build (multi-stage)
+docker-compose.yml    ← NAS runtime: app + cloudflared tunnel
+docs/DEPLOY-NAS.md    ← NAS deployment runbook
+nixpacks.toml         ← Railway build config (kept — Railway remains a fallback)
 ```
 
 ---
@@ -137,6 +140,9 @@ npm run dev
   - Corollary: **don't add RLS/Supabase-Auth machinery to this project.** A manually-added `ensure_rls` event trigger (`public.rls_auto_enable()`) had auto-enabled RLS with zero policies on all 14 tables — harmless only because the `postgres` role has `BYPASSRLS`, but a landmine if the connection role ever changes, and it re-enables RLS on any newly-created table (including `session`). Removed 2026-07-21. The intended model is: trusted DB connection, authorization enforced in Express (`isAuthenticated` + `WHERE user_id = req.user.id`), no per-row DB policies.
 
 - **2026-08-13 — Free-tier clocks are undeclared production dependencies (INFRA-07/08)**: The app went down with no code change, no failed deploy, and no alert — two independent free-tier timers expired. Railway's **Trial is a fixed 30-day window** (not "until the $5 credit runs out"): deployed 2026-07-13 → suspended ~2026-08-12, after which the workspace reverts to the Free plan and deployments stop. Supabase free projects **auto-pause after 7 days of inactivity**, so the suspended app stopped holding a connection and the DB paused behind it. The second failure is *caused* by the first, which makes the outage look worse than it is and means **restoring one tier alone leaves the app broken** — always check both. General rule: when a project runs on free/trial tiers, the signup date is a production dependency; record the expiry date in `STATUS.md` the day the service is provisioned, the same way any other deploy fact is recorded. Corollary on diagnosis: this repo has no health endpoint and no external monitor, so "is it down?" could only be answered by inference from dates plus the Supabase MCP — and the sandbox's egress proxy 403 on the live URL is *not* evidence either way (see "Verifying a deploy went live" above). Tracked as INFRA-09.
+
+- **2026-08-13 — Tailscale is not a way to publish a public site (INFRA-07)**: When self-hosting moved to the NAS, the instinct was "Tailscale is already set up, so the app is reachable." A tailnet is private by definition — the app would have loaded only on the owner's own devices, while `companion.postiusgroup.com` stayed dark for every real user. Tailscale *Funnel* does expose a service publicly, but only on a `*.ts.net` hostname, so the TLS certificate cannot match a custom domain. Split the two jobs: **Tailscale to operate the box** (DSM, SSH, logs, no open ports) and **Cloudflare Tunnel to serve the app** (outbound-only, keeps the custom domain, hides the home IP, carries WebSockets). General rule: "I can reach it" and "the internet can reach it" are different properties; check which one a networking tool actually provides before treating a host as deployed.
+- **2026-08-13 — A new import in `server/routes.ts` can break the whole test suite (INFRA-09)**: Adding `GET /api/health` by importing `pool` from `./db` took all 18 tests from passing to erroring at collection. `server/db.ts` throws at *import* time when `DATABASE_URL` is unset, and the suite has no database — it passes only because `vi.mock("./storage")` keeps `db.ts` out of the module graph entirely. Any direct `./db` import in a route file re-introduces that edge and the failure is a module-load error, not a test assertion, so it looks unrelated to the change. This is the same boundary AGENTS.md already states for a different reason ("routes call storage functions, nothing else") — the fix was `storage.ping()`. General rule: in this repo, a route file importing anything from `./db` is a bug; and when adding a function to `IStorage`, add it to the test's `vi.mock("./storage")` factory too, or the mock silently returns `undefined`.
 
 ---
 

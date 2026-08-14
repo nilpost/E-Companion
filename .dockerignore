@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.github
+.claude
+# Nothing imports the @assets alias, so this 248K of reference material
+# would only bloat the build context.
+attached_assets
+*.md
+.env
+.env.*
+coverage

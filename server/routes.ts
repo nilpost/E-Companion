@@ -20,6 +20,28 @@ export function registerRoutes(app: Express): Server {
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
+  // Liveness, plus an opt-in readiness probe. The 2026-08-13 outage was two
+  // separate failures (suspended host, auto-paused database) that looked
+  // identical from outside, so ?deep=1 round-trips the pool to tell them
+  // apart. Goes through storage.ping() like every other route — routes never
+  // touch the pool directly (AGENTS.md), and importing ./db here would also
+  // drag a live DATABASE_URL into the test suite's module graph.
+  app.get("/api/health", asyncHandler(async (req, res) => {
+    if (req.query.deep === undefined) {
+      return res.json({ status: "ok", uptime: process.uptime() });
+    }
+
+    try {
+      await storage.ping();
+      res.json({ status: "ok", db: "ok", uptime: process.uptime() });
+    } catch (err) {
+      // Log the driver error, don't return it — /api/health is unauthenticated
+      // and pg errors carry the host, port and role from DATABASE_URL.
+      console.error("health: database unreachable", err);
+      res.status(503).json({ status: "degraded", db: "unreachable" });
+    }
+  }));
+
   // Pets API
   app.get("/api/pets", asyncHandler(async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

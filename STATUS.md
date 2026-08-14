@@ -6,8 +6,9 @@
 ---
 
 ## Current sprint goal
-**Restore production hosting (INFRA-07/08).** Feature work (FEAT-02) is paused until the app is
-reachable again — there is nowhere to deploy or verify against right now.
+**Restore production hosting (INFRA-07/10).** Decided: self-host on the Synology NAS. Database is
+already back; compute needs a human at the NAS. Feature work (FEAT-02) stays paused until the app is
+reachable again.
 
 ## Last deployed
 - **Commit**: `77762c9` — fix vite.config.ts import.meta.dirname (production crash)
@@ -18,11 +19,12 @@ reachable again — there is nowhere to deploy or verify against right now.
     workspace drops to the Free plan ($1/mo credit) and deployments are suspended until someone
     subscribes to Hobby ($5/mo). *Not directly verified* — no Railway token/CLI in the sandbox, and the
     live URL is blocked by the egress proxy (see "Verifying a deploy went live" in AGENTS.md).
-  - **Database (Supabase)**: **confirmed `INACTIVE` (paused)** via Supabase MCP `get_project`
+  - **Database (Supabase)**: was **`INACTIVE` (paused)** — confirmed via MCP `get_project`
     (`ynegbxsokzonsjrandyi`). Free-tier projects auto-pause after 7 days without activity; with the app
-    suspended, nothing was holding the connection open. All three projects on the org are `INACTIVE`.
-  - **Consequence**: restoring only one tier is not enough. Compute needs a plan; the DB needs an
-    explicit restore.
+    suspended, nothing was holding the connection open. ✅ **Restored 2026-08-13** via MCP
+    `restore_project` (`INACTIVE` → `COMING_UP`).
+  - **Consequence**: restoring only one tier is not enough. The DB is back; **compute is still down**
+    until the NAS deploy (INFRA-10) is executed.
 
 ## In progress
 | Item | Owner | Started | Notes |
@@ -32,8 +34,8 @@ reachable again — there is nowhere to deploy or verify against right now.
 ## Blockers
 | Item | Why | Unblocks when |
 |------|-----|----------------|
-| **Production is down (INFRA-07)** | Railway Trial's fixed 30-day window elapsed ~2026-08-12 (deployed 2026-07-13), suspending deployments. Nothing can be deployed or verified until compute is restored | Human picks a hosting option (Railway Hobby $5/mo = zero migration; Render free = $0 with cold starts) and applies it |
-| **Supabase project paused (INFRA-08)** | Project `ynegbxsokzonsjrandyi` is `INACTIVE` — free-tier auto-pause after 7 days idle. Every DB query fails regardless of where the app runs | Human restores the project from the Supabase dashboard (or approves an MCP `restore_project` call) |
+| **Compute still down (INFRA-10)** | Railway Trial's fixed 30-day window elapsed ~2026-08-12. Chosen replacement is the Synology NAS; the Docker/tunnel scaffolding is committed, but the deploy itself needs shell access to the NAS, which no session here has — there is no Synology or Tailscale MCP server connected | Human runs `docs/DEPLOY-NAS.md` on the NAS (verify it is an x86 model first — ARM Synologys cannot run Docker) |
+| No external uptime monitoring (INFRA-09) | `GET /api/health` now exists and is wired as the container healthcheck, but nothing outside the box watches it. This is why the outage went unnoticed for days | Human points cron-job.org / UptimeRobot at `/api/health?deep=1` once the NAS deploy is live |
 | `DATABASE_URL_DIRECT` not set in Railway service variables | PR #14 wires `drizzle.config.ts` to prefer `DATABASE_URL_DIRECT` for `drizzle-kit push`, but the variable itself isn't set on Railway yet, so pushes still silently fall back through the Supabase pooler until it is | Human sets `DATABASE_URL_DIRECT` in Railway (Supabase → Settings → Database → direct connection, port 5432); tracked as INFRA-06 |
 
 ## Decisions log
@@ -60,6 +62,9 @@ reachable again — there is nowhere to deploy or verify against right now.
 | 2026-07-21 | **Forensic follow-up on SEC-04: no evidence of exploitation.** Checked three sources: (1) API gateway logs — only Supabase infra health-checks, zero `/rest/v1/users`; (2) `pg_stat_statements` — the `anon`/`authenticated` roles executed **zero** statements (only the `authenticator` role's PostgREST schema-cache introspection), so the Data API never served a table query; (3) Postgres logs — only migrations/DDL + a dashboard-owner `count(*) on auth.users` (benign). Blast radius: `public.users` held exactly **1 row**, created 2026-07-21 14:21 (same day the hole was open). Conclusion: exposure window was real but unexploited on available telemetry; forced password reset not warranted (optional rotation of the single test account if desired). Caveats: pg_stat_statements is blind if reset (no sign of it); gateway log retention is 24h but fully covers the window | Wanted to know whether the open window was actually abused before closing SEC-04 out; telemetry says no reads occurred and only one recent account existed |
 | 2026-08-13 | **Diagnosed the production outage as free-tier expiry on both tiers, not a code regression.** Confirmed directly: Supabase project `ynegbxsokzonsjrandyi` is `INACTIVE` (paused) via MCP `get_project`. Inferred from dates: Railway's Trial is a fixed 30-day window, INFRA-03 deployed 2026-07-13 → expiry ~2026-08-12, one day before the outage was noticed. No code change is implicated — last commit to `main` was 2026-07-31 and the app was healthy after it. Railway state could not be verified from the sandbox (no token/CLI; live URL blocked by the egress proxy, per the AGENTS.md note — a 403 there is *not* evidence of downtime) | User asked whether the Railway trial ending explains the outage; the dates line up exactly, and the paused DB is independent corroboration that traffic stopped |
 | 2026-08-13 | **Recommended staying on Railway (Hobby, $5/mo) over migrating**, with Render free as the $0 fallback | The repo is already wired end-to-end for Railway (`railway.json`, `nixpacks.toml`, auto-deploy from `main`, Cloudflare DNS, service env vars). Every alternative costs a re-do of DNS + env vars + build config, and this app needs a long-running process for its `ws` WebSocket server (`server/routes.ts:351`) — so serverless platforms are a poor fit. Render's free tier does support WebSockets and wakes on a new WS connection, but spins down after 15 min idle with a ~1 min cold start, which would make the chat view feel dead on first hit; its free Postgres also expires 30 days after creation, so Supabase should be kept either way. Fly.io (~$2-5/mo) is technically fine but needs a Dockerfile + fly.toml; Koyeb's free tier closed to new users after the Mistral acquisition |
+| 2026-08-13 | **Chose to self-host on the Synology NAS** over Railway Hobby / Render / Fly, and committed the scaffolding: multi-stage `Dockerfile`, `docker-compose.yml`, `docs/DEPLOY-NAS.md`. $0 marginal cost on hardware already owned, and no trial clock left to expire | User's call, given Tailscale and MCP tooling are now in place on their side. Accepted trade: no SLA (home power/ISP/DSM reboots) and no push-to-deploy — INFRA-11 tracks replacing the latter |
+| 2026-08-13 | **Corrected the access model: Tailscale operates the NAS, Cloudflare Tunnel publishes the app.** The `cloudflared` service in `docker-compose.yml` sits behind a `public` profile so the app can also run tailnet-only | A tailnet is private by definition — on Tailscale alone, `companion.postiusgroup.com` would resolve only for the user's own devices, which does not work for an app with public user registration. Tailscale *Funnel* can expose a service publicly but only on a `*.ts.net` hostname, so the TLS cert would not match the custom domain. Cloudflare Tunnel keeps the existing URL, needs no port forwarding, never exposes the home IP, carries the WebSockets `chat-view.tsx` needs, and reuses the Cloudflare account already holding the DNS (INFRA-04) |
+| 2026-08-13 | Shipped `GET /api/health` (+ `?deep=1`) through `storage.ping()` rather than importing the pool into `server/routes.ts` | First attempt imported `pool` from `./db` directly, which broke all 18 tests — `server/db.ts` throws at import time on a missing `DATABASE_URL`, and the suite only worked because mocking `./storage` kept `db.ts` out of the module graph. It also violated the AGENTS.md rule that routes call storage functions and nothing else. Routing it through `storage.ping()` fixed both at once; verified 18/18 passing and no new `tsc` errors vs. HEAD |
 | 2026-07-21 | Ran an env-var audit (Railway/Supabase config vs. AGENTS.md/BOOTSTRAP.md docs) and merged PR #14 | Found three documented-vs-actual gaps: (1) `drizzle.config.ts` read only `DATABASE_URL`, so `drizzle-kit push` silently ran through the Supabase pooler despite docs claiming a direct connection — now prefers `DATABASE_URL_DIRECT ?? DATABASE_URL`, using the Supavisor **session-mode** pooler (port 5432, IPv4-safe for Railway) rather than the IPv6-only direct host that BUG-03 above showed Railway can't route; (2) `server/auth.ts` used a `!` non-null assertion on `SESSION_SECRET` instead of a fail-fast guard, unlike the equivalent `DATABASE_URL` guard in `server/db.ts` — now guarded with a clear startup error; (3) `.env.example` didn't document `DATABASE_URL_DIRECT` or `PORT` — now documents both. Runtime app connection (`server/db.ts`) unchanged; `npm run check` clean for changed files (pre-existing unrelated errors remain in `server/storage.ts` and `client/src/hooks/use-auth.tsx`, tracked as CHORE-07) |
 
 ## Agent team status
