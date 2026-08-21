@@ -6,3 +6,7 @@ vite.config.ts.*
 *.tar.gz
 .env
 .env.local
+# Catch .env.production and friends too — TUNNEL_TOKEN and SESSION_SECRET
+# live in these files.
+.env.*
+!.env.example

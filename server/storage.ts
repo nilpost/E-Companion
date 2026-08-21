@@ -74,6 +74,11 @@ export interface IStorage {
   updateReminder(id: number, updates: Partial<Reminder>): Promise<Reminder | undefined>;
   deleteReminder(id: number): Promise<boolean>;
 
+  // Connectivity probe for GET /api/health?deep=1. Raw SQL rather than the
+  // query builder on purpose: it checks that the connection answers at all,
+  // and must not depend on any table existing.
+  ping(): Promise<void>;
+
   sessionStore: session.SessionStore;
 }
 
@@ -85,6 +90,10 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+
+  async ping(): Promise<void> {
+    await pool.query("SELECT 1");
   }
 
   // Users

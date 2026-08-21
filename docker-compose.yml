@@ -1,0 +1,65 @@
+# E-Companion on a Synology NAS (Container Manager / Docker Compose).
+#
+# Two services, and the split matters:
+#   app        — the Express server + built client, private to the NAS.
+#   cloudflared — outbound-only tunnel that publishes it on the real domain.
+#
+# Tailscale is deliberately NOT what serves the public site. It puts the NAS on
+# your private mesh, which is the right tool for reaching DSM/SSH to operate the
+# box — but a tailnet is private, so on Tailscale alone companion.postiusgroup.com
+# would only work for your own devices. Cloudflare Tunnel keeps the public URL
+# working, needs no port forwarding, and never exposes the home IP.
+#
+# Run the tunnel only when you want it public:
+#   docker compose up -d                     # app only, reachable on the LAN/tailnet
+#   docker compose --profile public up -d    # app + public tunnel
+
+services:
+  app:
+    build: .
+    image: ghcr.io/nilpost/e-companion:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    ports:
+      # Unqualified host-port syntax publishes on ALL host interfaces
+      # (0.0.0.0), not just loopback/LAN — that is what makes the app
+      # reachable over the NAS's Tailscale interface in tailnet-only mode.
+      # Nothing here keeps it off the internet: that depends on the router
+      # not forwarding 5000 and on DSM's firewall. The public path does not
+      # need this line at all — cloudflared reaches the app over the compose
+      # network. Narrow it to "127.0.0.1:5000:5000" if you only ever want
+      # local access and are running with --profile public.
+      - "5000:5000"
+    healthcheck:
+      # ?deep=1 so a paused Supabase project marks the container unhealthy
+      # instead of it sitting "up" while every query fails — the exact
+      # silent-failure shape of BUG-03 and the 2026-08-13 outage.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/api/health?deep=1').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["public"]
+    command: tunnel --no-autoupdate run
+    environment:
+      # Create the tunnel in the Cloudflare dashboard (Zero Trust → Networks →
+      # Tunnels), point its public hostname at http://app:5000, and put the
+      # token in .env as TUNNEL_TOKEN. Never commit it.
+      # Defaults to empty rather than a hard `:?` requirement: Compose
+      # interpolates every service's variables at file-load time regardless
+      # of profiles, so a required var here broke `docker compose up -d`
+      # (app-only, tailnet mode) even when cloudflared was never started.
+      # Verified: with TUNNEL_TOKEN unset, `docker compose up -d` (no
+      # profile) failed at interpolation before this fix. If you do run
+      # `--profile public` with no token set, cloudflared itself exits with
+      # a clear "no tunnel token provided" error in its own logs.
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - app
