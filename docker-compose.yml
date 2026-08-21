@@ -24,8 +24,14 @@ services:
       NODE_ENV: production
       PORT: "5000"
     ports:
-      # Bound to loopback+LAN on the NAS; the tunnel reaches it over the
-      # compose network, so this is only for local/tailnet access.
+      # Unqualified host-port syntax publishes on ALL host interfaces
+      # (0.0.0.0), not just loopback/LAN — that is what makes the app
+      # reachable over the NAS's Tailscale interface in tailnet-only mode.
+      # Nothing here keeps it off the internet: that depends on the router
+      # not forwarding 5000 and on DSM's firewall. The public path does not
+      # need this line at all — cloudflared reaches the app over the compose
+      # network. Narrow it to "127.0.0.1:5000:5000" if you only ever want
+      # local access and are running with --profile public.
       - "5000:5000"
     healthcheck:
       # ?deep=1 so a paused Supabase project marks the container unhealthy
