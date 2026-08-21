@@ -46,6 +46,14 @@ services:
       # Create the tunnel in the Cloudflare dashboard (Zero Trust → Networks →
       # Tunnels), point its public hostname at http://app:5000, and put the
       # token in .env as TUNNEL_TOKEN. Never commit it.
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+      # Defaults to empty rather than a hard `:?` requirement: Compose
+      # interpolates every service's variables at file-load time regardless
+      # of profiles, so a required var here broke `docker compose up -d`
+      # (app-only, tailnet mode) even when cloudflared was never started.
+      # Verified: with TUNNEL_TOKEN unset, `docker compose up -d` (no
+      # profile) failed at interpolation before this fix. If you do run
+      # `--profile public` with no token set, cloudflared itself exits with
+      # a clear "no tunnel token provided" error in its own logs.
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
     depends_on:
       - app
