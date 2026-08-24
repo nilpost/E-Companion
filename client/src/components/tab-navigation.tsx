@@ -1,5 +1,6 @@
 import { Home, Users, Calendar, Heart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 interface TabNavigationProps {
   activeTab: string;
@@ -7,14 +8,16 @@ interface TabNavigationProps {
 }
 
 const tabs = [
-  { id: "dashboard", label: "Home", icon: Home },
-  { id: "social", label: "Community", icon: Users },
-  { id: "booking", label: "Booking", icon: Calendar },
-  { id: "health", label: "Health", icon: Heart },
-  { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "dashboard", labelKey: "nav.home", icon: Home },
+  { id: "social", labelKey: "nav.community", icon: Users },
+  { id: "booking", labelKey: "nav.booking", icon: Calendar },
+  { id: "health", labelKey: "nav.health", icon: Heart },
+  { id: "chat", labelKey: "nav.chat", icon: MessageCircle },
 ];
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+  const { t } = useTranslation();
+
   return (
     <nav className="bg-white border-b border-gray-200">
       <div className="flex">
@@ -34,7 +37,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
               onClick={() => onTabChange(tab.id)}
             >
               <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-xs font-medium">{t(tab.labelKey)}</span>
             </Button>
           );
         })}
